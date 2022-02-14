@@ -1,6 +1,6 @@
 package service
 
-import "golang-tool/net/clientConn"
+import "github.com/mimis-s/golang_tools/net/clientConn"
 
 type Service interface {
 	Listen() error

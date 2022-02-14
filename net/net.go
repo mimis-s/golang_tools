@@ -1,9 +1,9 @@
 package net
 
 import (
-	"golang-tool/net/clientConn"
-	"golang-tool/net/service"
-	"golang-tool/net/tcp"
+	"github.com/mimis-s/golang_tools/net/clientConn"
+	"github.com/mimis-s/golang_tools/net/service"
+	"github.com/mimis-s/golang_tools/net/tcp"
 )
 
 var mapProtol = make(map[string]service.Service)

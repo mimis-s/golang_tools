@@ -3,7 +3,7 @@ package clientConn
 import (
 	"bufio"
 	"fmt"
-	"golang-tool/lib/zbyte"
+	"github.com/mimis-s/golang_tools/lib/zbyte"
 	"io"
 	"net"
 )

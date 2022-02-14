@@ -2,7 +2,7 @@ package net
 
 import (
 	"fmt"
-	"golang-tool/net/clientConn"
+	"github.com/mimis-s/golang_tools/net/clientConn"
 	"testing"
 )
 
