@@ -3,11 +3,12 @@ package net
 import (
 	"encoding/json"
 	"fmt"
-	"gitee.com/mimis/golang_tool/lib/zbyte"
 	"log"
 	"net"
 	"testing"
 	"time"
+
+	"gitee.com/mimis/golang-tool/lib/zbyte"
 )
 
 func sendMessage(conn net.Conn) {

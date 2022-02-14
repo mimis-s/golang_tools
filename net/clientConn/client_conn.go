@@ -6,7 +6,7 @@ import (
 	"io"
 	"net"
 
-	"gitee.com/mimis/golang_tool/lib/zbyte"
+	"gitee.com/mimis/golang-tool/lib/zbyte"
 )
 
 type CallBackFunc func(*ClientMsg) (*ClientMsg, error)

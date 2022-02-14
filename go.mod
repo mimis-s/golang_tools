@@ -1,3 +1,3 @@
-module gitee.com/mimis/golang_tool
+module gitee.com/mimis/golang-tool
 
 go 1.17

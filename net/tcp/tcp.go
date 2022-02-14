@@ -2,8 +2,9 @@ package tcp
 
 import (
 	"fmt"
-	"gitee.com/mimis/golang_tool/net/clientConn"
 	"net"
+
+	"gitee.com/mimis/golang-tool/net/clientConn"
 )
 
 type Tcp struct {
