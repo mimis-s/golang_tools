@@ -2,7 +2,7 @@ package tcp
 
 import (
 	"fmt"
-	"golang-tool/net/clientConn"
+	"gitee.com/mimis/golang_tool/net/clientConn"
 	"net"
 )
 

@@ -3,9 +3,10 @@ package clientConn
 import (
 	"bufio"
 	"fmt"
-	"golang-tool/lib/zbyte"
 	"io"
 	"net"
+
+	"gitee.com/mimis/golang_tool/lib/zbyte"
 )
 
 type CallBackFunc func(*ClientMsg) (*ClientMsg, error)

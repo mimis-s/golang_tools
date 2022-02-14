@@ -3,7 +3,7 @@ package net
 import (
 	"encoding/json"
 	"fmt"
-	"golang-tool/lib/zbyte"
+	"gitee.com/mimis/golang_tool/lib/zbyte"
 	"log"
 	"net"
 	"testing"
