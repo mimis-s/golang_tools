@@ -1,7 +1,6 @@
 package service
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/rpcxio/rpcx-etcd/serverplugin"
@@ -23,7 +22,7 @@ func New(addr string, etcdAddr []string, etcdBasePath string) (*ServerManage, er
 		basePath = etcdBasePath
 	}
 
-	go http.ListenAndServe(addr, nil)
+	// go http.ListenAndServe(addr, nil)
 
 	s := server.NewServer()
 
