@@ -63,8 +63,8 @@ func sendMessage(conn net.Conn) {
 			log.Fatal(err)
 		}
 		//包id标识
-		recvID := zbyte.ByteToInt(recvHead[:4])
-		recvLen := zbyte.ByteToInt(recvHead[4:])
+		recvID := zbyte.BigEndByteToInt32(recvHead[:4])
+		recvLen := zbyte.BigEndByteToInt32(recvHead[4:])
 
 		recvMsg := make([]byte, recvLen)
 		_, err = conn.Read(recvMsg)

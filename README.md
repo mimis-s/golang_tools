@@ -14,4 +14,4 @@ InitService接口的传入参数是addr，协议(现在仅支持TCP)类型，消
 Listen接口主要是开启网络服务，监听，收发消息
 2.  rpcx库主要封装了rpcx服务器的创建，运行接口，客户端创建，调用接口，代码简单明了，
 详细使用可参考protobuf插件集成rpcx: https://gitee.com/mimis/protoc-gen-rpcx
-3.  xxxx
+3.  STMP
