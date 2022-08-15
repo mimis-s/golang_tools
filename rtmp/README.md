@@ -1,1 +1,0 @@
-STMP文档: http://www.adobe.com/cn/devnet/rtmp.html
