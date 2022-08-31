@@ -33,57 +33,9 @@ const (
 )
 
 //=====================================================================
-// queue definition 用双向链表实现的队列,golang中这个结构可能被废弃
-//=====================================================================
-type IQueueHead struct {
-	Next *IQueueHead
-	Prev *IQueueHead
-}
-
-func NewIQueueHead() IQueueHead {
-	q := IQueueHead{}
-	q.Next = &q
-	q.Prev = &q
-	return q
-}
-
-func (head *IQueueHead) PushBack(node *IQueueHead) {
-	node.Prev, node.Next = head, head.Next
-	head.Next.Prev, head.Next = node, node
-}
-
-func (head *IQueueHead) PushFront(node *IQueueHead) {
-	node.Prev, node.Next = head.Prev, head
-	head.Prev.Next, head.Prev = node, node
-}
-
-func (head *IQueueHead) DelBetween(node_fornt *IQueueHead, node_back *IQueueHead) {
-	node_back.Prev = node_fornt
-	node_fornt.Next = node_back
-}
-
-func (head *IQueueHead) Clear() {
-	head.Next.Prev = head.Prev
-	head.Prev.Next = head.Next
-	head.Next = nil
-	head.Prev = nil
-}
-
-func (head *IQueueHead) ClearAndInit() {
-	head.Clear()
-	head.Next = head
-	head.Prev = head
-}
-
-func (head *IQueueHead) IsEmpty() bool {
-	return head.Next == nil
-}
-
-//=====================================================================
 // segment 段结构
 //=====================================================================
 type IKCPSEG struct {
-	Node     *IQueueHead
 	Conv     uint32 // conv 双方协商的唯一识别码, 收发端一致
 	Cmd      uint32 // cmd 报文段类型,IKCP_CMD_PUSH, IKCP_CMD_ACK, IKCP_CMD_WASK, IKCP_CMD_WINS
 	Frg      uint32 // frg 剩余包的分片数量, 这个包之后还有多少个报文属于这个包
@@ -125,10 +77,10 @@ type IKCPCB struct {
 	Ts_probe, Probe_wait uint32
 	// dead_link 当一个报文发送超时次数达到 dead_link 次时认为连接断开, incr 用于计算 cwnd
 	Dead_link, Incr uint32
-	Snd_queue       IQueueHead // snd_queue 发送队列
-	Rcv_queue       IQueueHead // rcv_queue 接收队列
-	Snd_buf         IQueueHead // 发送缓冲区
-	Rcv_buf         IQueueHead // 接收缓冲区
+	Snd_queue       []IKCPSEG // snd_queue 发送队列
+	Rcv_queue       []IKCPSEG // rcv_queue 接收队列
+	Snd_buf         []IKCPSEG // 发送缓冲区
+	Rcv_buf         []IKCPSEG // 接收缓冲区
 	// acklist, ackcount, ackblock: ACK 列表, ACK 列表的长度和容量.
 	// 待发送的 ACK 的相关信息会先存在 ACK 列表中, flush 时一并发送.
 	AckList  *uint32
