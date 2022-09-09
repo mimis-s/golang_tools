@@ -2,11 +2,10 @@ package clientConn
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
-
-	"gitee.com/mimis/golang-tool/lib/zbyte"
 )
 
 type CallBackFunc func(*ClientMsg) (*ClientMsg, error)
@@ -40,8 +39,8 @@ func ReadClientMsg(inStream *bufio.Reader) (*ClientMsg, error) {
 	if err != nil {
 		return nil, err
 	}
-	msgID := zbyte.BigEndByteToInt32(head[:4])
-	msgLen := zbyte.BigEndByteToInt32(head[4:])
+	msgID := int(binary.BigEndian.Uint32(head[:4]))
+	msgLen := int(binary.BigEndian.Uint32(head[4:]))
 
 	// 消息体
 	msgByte := make([]byte, msgLen)
@@ -88,8 +87,8 @@ func (c *ClientConn) DeliverRecvMsg(call CallBackFunc) {
 
 			// 将消息封装起来(id + 长度 + 消息)
 			buf := make([]byte, 0, 8+len(res.Msg))
-			buf = append(buf, zbyte.BigEndInt32ToByte(res.Tag)...)      // id占4个字节
-			buf = append(buf, zbyte.BigEndInt32ToByte(len(res.Msg))...) // 长度占4个字节
+			binary.BigEndian.PutUint32(buf[:4], uint32(res.Tag))      // id占4个字节
+			binary.BigEndian.PutUint32(buf[4:], uint32(len(res.Msg))) // 长度占4个字节
 			buf = append(buf, res.Msg...)
 
 			c.sendQueue <- buf

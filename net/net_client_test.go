@@ -1,14 +1,13 @@
 package net
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"testing"
 	"time"
-
-	"gitee.com/mimis/golang-tool/lib/zbyte"
 )
 
 func sendMessage(conn net.Conn) {
@@ -63,8 +62,8 @@ func sendMessage(conn net.Conn) {
 			log.Fatal(err)
 		}
 		//包id标识
-		recvID := zbyte.BigEndByteToInt32(recvHead[:4])
-		recvLen := zbyte.BigEndByteToInt32(recvHead[4:])
+		recvID := binary.BigEndian.Uint32(recvHead[:4])
+		recvLen := binary.BigEndian.Uint32(recvHead[4:])
 
 		recvMsg := make([]byte, recvLen)
 		_, err = conn.Read(recvMsg)
