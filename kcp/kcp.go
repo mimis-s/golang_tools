@@ -94,13 +94,13 @@ func (kcp *IKCPCB) Input(data []byte) int {
 
 		data = data[IKCP_OVERHEAD:]
 
-		if len(data) < int(seg.Len) || seg.Len < 0 {
+		if len(data) < int(seg.Len) || seg.Len < uint32(0) {
 			// 剩下的可读取长度小于设定的长度
 			return -2
 		}
 
 		// 如果不是push, ack, wask, wins这四个类型,则返回-3
-		if seg.Cmd != IKCP_CMD_ACK && seg.Cmd != IKCP_CMD_ACK &&
+		if seg.Cmd != IKCP_CMD_ACK && seg.Cmd != IKCP_CMD_PUSH &&
 			seg.Cmd != IKCP_CMD_WASK && seg.Cmd != IKCP_CMD_WINS {
 			return -3
 		}
