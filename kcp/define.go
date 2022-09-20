@@ -63,7 +63,7 @@ type IKCPCB struct {
 	Ts_recent, Ts_lastack, Ssthresh uint32
 	// rx_rto 超时重传时间, rx_rttval, rx_srtt, rx_minrto: 计算 rx_rto 的中间变量.
 	Rx_rttval, Rx_srtt, Rx_rto, Rx_minrto int32
-	// snd_wnd, rcv_wnd 发送窗口和接收窗口的大小, rmt_wnd 对端剩余接收窗口的大小.cwnd 拥塞窗口.probe 是否要发送控制报文的标志.
+	// snd_wnd, rcv_wnd 发送窗口和接收窗口的大小, rmt_wnd 对端剩余接收窗口的大小.cwnd 拥塞窗口.probe 探测窗口变量(IKCP_ASK_TELL表示告知远端窗口大小。IKCP_ASK_SEND表示请求远端告知窗口大小).
 	Snd_wnd, Rcv_wnd, Rmt_wnd, Cwnd, Probe uint32
 	// current 当前时间,interval flush 的时间粒度,ts_flush 下次需要 flush 的时间,xmit 该链接超时重传的总次数
 	Current, Interval, Ts_flush, Xmit uint32
@@ -73,7 +73,7 @@ type IKCPCB struct {
 	Nrcv_que, Nsnd_que uint32
 	// nodelay: 是否启动快速模式,updated 是否调用过 ikcp_update
 	Nodelay, Updated uint32
-	// ts_probe, probe_wait 确定何时需要发送窗口询问报文
+	// ts_probe下次窗口探测的时间戳, probe_wait 发送探测窗口消息的间隔时间
 	Ts_probe, Probe_wait uint32
 	// dead_link 当一个报文发送超时次数达到 dead_link 次时认为连接断开, incr 用于计算 cwnd
 	Dead_link, Incr uint32
@@ -83,7 +83,7 @@ type IKCPCB struct {
 	Rcv_buf         []IKCPSEG // 接收缓冲区
 	// acklist, ackcount, ackblock: ACK 列表, ACK 列表的长度和容量.
 	// 待发送的 ACK 的相关信息会先存在 ACK 列表中, flush 时一并发送.
-	AckList  *uint32
+	AckList  []uint32
 	AckCount uint32
 	AckBlock uint32
 	User     unsafe.Pointer

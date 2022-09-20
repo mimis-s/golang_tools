@@ -1,6 +1,8 @@
 package kcp
 
-import "gitee.com/mimis/golang-tool/lib"
+import (
+	"gitee.com/mimis/golang-tool/lib"
+)
 
 // 发送方接收缓冲区还未接收的最小报文段编号una,如果比发送缓冲区sn大,那就从发送缓冲区删除
 // 例:1和2通信,2没有收到的sn最小的号una如果比1中发送缓冲区的sn要大,说明1中的发送缓冲区有很多对方已经收到的消息,但是没有删除,所以要删除

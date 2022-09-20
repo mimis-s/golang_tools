@@ -3,6 +3,8 @@ package kcp
 import (
 	"encoding/binary"
 	"unsafe"
+
+	"gitee.com/mimis/golang-tool/lib"
 )
 
 type cmdFunc func(*IKCPCB, *IKCPSEG)
@@ -48,8 +50,39 @@ func (kcp *IKCPCB) Recv(buffer []byte, buf_len int) int {
 	return 0
 }
 
-// 发送
-func (kcp *IKCPCB) Send(buffer []byte, buf_len int) {
+// 发送, 将要发送的数据转换成KCP格式, 添加到snd_queue,当数据大于一个MSS(最大分片大小)就对数据进行分片
+// 分片个数不能大于255
+func (kcp *IKCPCB) Send(buffer []byte) int {
+	if len(buffer) <= 0 || kcp.Mss <= 0 {
+		return -1
+	}
+
+	// 计算分片数量
+	splitNum := 1
+	if len(buffer) > int(kcp.Mss) {
+		splitNum = len(buffer) / int(kcp.Mss)
+	}
+
+	if splitNum > 255 {
+		return -2
+	}
+
+	// 组装seg结构,加入snd_buf
+	buffer_2 := buffer
+	for i := 0; i < splitNum; i++ {
+		splitLen := lib.MinInt(len(buffer_2), int(kcp.Mss))
+		seg := IKCPSEG{
+			Len:  uint32(splitLen),
+			Frg:  uint32(splitNum - i - 1), // 分片的序号, 从大到小递减
+			Data: buffer_2[:splitLen],
+		}
+
+		kcp.Snd_queue = append(kcp.Snd_queue, seg)
+		kcp.Nsnd_que++ // 这个可以不用
+
+		buffer_2 = buffer_2[splitLen:]
+	}
+	return 0
 }
 
 // 更新状态,每10~100ms调用一次,current当前时间戳
@@ -146,8 +179,86 @@ func (kcp *IKCPCB) Input(data []byte) int {
 	return 0
 }
 
-// 刷新数据
+// 刷新数据, 将snd_buf中的数据通过下层UDP发送出去,有以下四种情况:
+// 发送ack, 发送探测窗口消息, 计算拥塞窗口大小, 将消息从snd_queue转移到snd_buf
 func (kcp *IKCPCB) Flush() {
+
+	// 判断update是否被调用
+	if kcp.Updated == 0 {
+		return
+	}
+
+	// 构造一个ack seg, 告诉对方自己的剩余窗口大小和还没有接收的最小sn
+	seg := IKCPSEG{
+		Conv: kcp.Conv,
+		Cmd:  IKCP_CMD_ACK,                               // ack报文
+		Wnd:  lib.MaxUint32(kcp.Rcv_wnd-kcp.Nrcv_que, 0), // 接收窗口-接收队列 = 剩余接收窗口大小
+		Una:  kcp.Rcv_nxt,
+	}
+
+	// flush ack, 因为ack消息没有data,固定24byte,所以可以把多个ack拼接起来一起发送
+	outputBuffer := make([]byte, 0)
+	for i := 0; i < int(kcp.AckCount); i++ {
+
+		if len(outputBuffer)+int(IKCP_OVERHEAD) > int(kcp.Mtu) {
+			// 当ack序列的长度+24(一个ack长度) > mtu时发送ack序列
+			// mss = mtu - 24的头,这里因为mss报文段没有数据,mtu应该是24
+			kcp.Output(outputBuffer, len(outputBuffer), kcp, kcp.User)
+			// 又重新初始化要发送的ack序列
+			outputBuffer = make([]byte, 0)
+		}
+
+		// 这里可以得到acklist是sn和ts交替的数组
+		seg.Sn = kcp.AckList[i*2]
+		seg.Ts = kcp.AckList[i*2+1]
+
+		outputBuffer = append(outputBuffer, seg.Encode()...)
+	}
+	kcp.AckCount = 0
+
+	// 发送探测窗口消息
+	// 设置下次探测时间戳和间隔时间
+	if kcp.Rmt_wnd == 0 { // 对端接收窗口大小为0
+		if kcp.Probe_wait == 0 { // 探测窗口的时间间隔为0
+			kcp.Probe_wait = IKCP_PROBE_INIT // 设置探测窗口的时间间隔
+			// 设置下次探测窗口的时间戳 = 当前时间 + 等待时间间隔
+			kcp.Ts_probe = kcp.Current + kcp.Probe_wait
+		} else {
+			if kcp.Current >= kcp.Ts_probe {
+				if kcp.Probe_wait < IKCP_PROBE_INIT {
+					kcp.Probe_wait = IKCP_PROBE_INIT
+				}
+				kcp.Probe_wait += kcp.Probe_wait / 2 // 时间间隔变成1.5倍
+				if kcp.Probe_wait > IKCP_PROBE_LIMIT {
+					kcp.Probe_wait = IKCP_PROBE_LIMIT // 不能超过最大的时间间隔阈值
+				}
+				kcp.Ts_probe = kcp.Current + kcp.Probe_wait
+				kcp.Probe |= IKCP_ASK_SEND // 请求对端告知窗口大小
+			}
+		}
+	} else {
+		kcp.Ts_probe = 0
+		kcp.Probe_wait = 0
+	}
+
+	// 发送探测窗口消息
+	if kcp.Probe == IKCP_ASK_SEND || kcp.Probe == IKCP_ASK_TELL {
+		if kcp.Probe == IKCP_ASK_SEND {
+			seg.Cmd = IKCP_CMD_WASK
+		} else {
+			seg.Cmd = IKCP_CMD_WINS
+		}
+		// 这里源码用前面的outputAckBuffer序列继续做操作, 很巧妙的把上面剩下的一个seg用到了现在的逻辑里面
+		if len(outputBuffer)+int(IKCP_OVERHEAD) > int(kcp.Mtu) {
+			// 当ack序列的长度+24(一个ack长度) > mtu时发送ack序列
+			// mss = mtu - 24的头,这里因为mss报文段没有数据,mtu应该是24
+			kcp.Output(outputBuffer, len(outputBuffer), kcp, kcp.User)
+			// 又重新初始化要发送的ack序列
+			outputBuffer = make([]byte, 0)
+		}
+		outputBuffer = append(outputBuffer, seg.Encode()...)
+	}
+	kcp.Probe = 0 // 格式化探测窗口变量
 }
 
 // 检查接收队列中下一条消息的大小
@@ -171,9 +282,25 @@ func (kcp *IKCPCB) WaitSnd() int {
 	return 0
 }
 
-// 启动快速模式, nodelay-> 0禁用,1启用, interval -> 内部更新定时器间隔,默认为100ms,
-// resend -> 0禁用快速重传,1启用, nc ->0启用拥塞控制,1禁用
+// 启动快速重传模式, nodelay-> 0禁用,1启用, interval -> 内部更新定时器间隔,默认为100ms,
+// resend -> 快速重传的次数阈值, nc ->0启用拥塞控制,1禁用
 func (kcp *IKCPCB) SetNodelay(nodelay, interval, resend, nc int) int {
+	// 源码这里对于参数都进行了>=0判断,是怕传入负数参数,我们这里直接统一判断如果有一个负数,那么就直接返回-1
+	if nodelay < 0 || interval < 0 || resend < 0 || nc < 0 {
+		return -1
+	}
+	// 启用快速重传
+	kcp.Nodelay = uint32(nodelay)
+	if nodelay > 0 {
+		kcp.Rx_minrto = int32(IKCP_RTO_NDL) // 快速重传最小超时时间
+	} else {
+		kcp.Rx_minrto = int32(IKCP_RTO_MIN) // 正常最小超时时间
+	}
+
+	// 内部flush刷新时间,[10, 5000]
+	kcp.Interval = uint32(lib.MinInt(lib.MaxInt(nodelay, 10), 5000))
+	kcp.FastReSend = resend
+	kcp.Nocwnd = nc // 是否启用拥塞控制
 	return 0
 }
 
