@@ -381,18 +381,19 @@ func (kcp *IKCPCB) Flush() {
 
 	// 更新ssthresh(慢启动阈值)
 	if change {
-		// 如果该分片被跳过的次数超过重传次数
+		// 当发生过快速重传的时候,将慢启动阈值调整为当前发送窗口的一半
 		inflight := kcp.Snd_nxt - kcp.Snd_una
 		kcp.Ssthresh = inflight / 2
 		if kcp.Ssthresh < IKCP_THRESH_MIN {
 			kcp.Ssthresh = IKCP_THRESH_MIN
 		}
+		// 拥塞窗口大小等于拥塞窗口阈值+触发快速重传的次数
 		kcp.Cwnd = kcp.Ssthresh + uint32(resent)
 		kcp.Incr = kcp.Cwnd * kcp.Mss
 	}
 
 	if bLost {
-		// 如果发生了超时重传
+		// 如果发生了超时重传,丢包之后窗口大小减半
 		kcp.Ssthresh = cwnd / 2
 		if kcp.Ssthresh < IKCP_THRESH_MIN {
 			kcp.Ssthresh = IKCP_THRESH_MIN
