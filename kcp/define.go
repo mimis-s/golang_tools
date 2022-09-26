@@ -44,9 +44,9 @@ type IKCPSEG struct {
 	Sn       uint32 // sn 报文编号,唯一标识报文
 	Una      uint32 // una 发送方接收缓冲区还未接收的最小报文段编号
 	Len      uint32 // len 后面的数据长度
-	ReSendTs uint32
+	ReSendTs uint32 // 下次超时重传的时间戳
 	Rto      uint32 // rto 超时重传时间
-	FastACK  uint32 // fastack 快速重传
+	FastACK  uint32 // fastack 快速重传, 收到ack时计算的该分片被跳过的累计次数
 	Xmit     uint32 // 该链接超时重传的总次数
 	Data     []byte // data 数据
 }
@@ -56,7 +56,8 @@ type IKCPSEG struct {
 //---------------------------------------------------------------------
 type IKCPCB struct {
 	// mtu 最大传输单元, mss 最大报文段大小mss=mtu-包头长度(24),state 连接状态 0连接建立,-1断开(因为是uint32所以-1为0xffffffff)
-	Conv, Mtu, Mss, State uint32
+	Conv, Mtu, Mss uint32
+	State          int32
 	// snd_una 发送缓冲区最小还未确认送达的报文段编号,snd_nxt 下一个等待发送报文段编号,rcv_nxt下一个等待接收段编号
 	Snd_una, Snd_nxt, Rcv_nxt uint32
 	// ts_recent, ts_lastack未使用, ssthresh 慢启动阀值

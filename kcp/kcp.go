@@ -259,6 +259,153 @@ func (kcp *IKCPCB) Flush() {
 		outputBuffer = append(outputBuffer, seg.Encode()...)
 	}
 	kcp.Probe = 0 // 格式化探测窗口变量
+
+	// 计算拥塞窗口大小
+	cwnd := lib.MinUInt32(kcp.Rmt_wnd, kcp.Snd_wnd) // 发送窗口和远端接收窗口取最小值
+	if kcp.Nocwnd == 0 {                            // 考虑拥塞控制
+		cwnd = lib.MinUInt32(kcp.Cwnd, cwnd) // 拥塞窗口和上面得到的值取最小值
+	}
+
+	// 将数据从snd_queue移动到snd_buf中
+	// 滑动窗口的起点应该是snd_una(最小还未确认送达的sn),而snd_nxt(下一个等待发送的sn)必须满足不能超过滑动窗口的范围
+	// 滑动窗口是用来控制发送速率的
+	for kcp.Snd_nxt < kcp.Snd_una+cwnd {
+		if len(kcp.Snd_queue) == 0 {
+			// 没有消息需要发送
+			break
+		}
+		newseg := kcp.Snd_queue[0]
+		newseg.Conv = kcp.Conv          // 唯一会话id
+		newseg.Cmd = IKCP_CMD_PUSH      // 消息类型为数据类型
+		newseg.Wnd = seg.Wnd            // 发送方的接受窗口大小
+		newseg.Ts = kcp.Current         // 发送的时间戳
+		newseg.Sn = kcp.Snd_nxt         // 当前消息的sn
+		newseg.Una = kcp.Rcv_nxt        // 发送方还未接收的最小sn等于下一个等待接受的sn
+		newseg.ReSendTs = kcp.Current   // 下次超时重传的时间戳
+		newseg.Rto = uint32(kcp.Rx_rto) // 超时重传时间
+		newseg.FastACK = 0              // 收到ack时计算的该分片被跳过的累计次数
+		newseg.Xmit = 0                 // 发送分片的次数,发送一次+1
+
+		kcp.Snd_buf = append(kcp.Snd_buf, newseg)
+		kcp.Snd_queue = kcp.Snd_queue[1:]
+
+		// 关于长度的参数都可以删除
+		kcp.Nsnd_que--
+		kcp.Nsnd_buf++
+		kcp.Snd_nxt++
+	}
+
+	// 消息失序次数
+	resent := 0xffffffff
+	if kcp.FastReSend > 0 {
+		resent = kcp.FastReSend
+	}
+	rtomin := 0
+	if kcp.Nodelay == 0 { // 如果没有启用了快速模式,超时重传时间/8
+		rtomin = int(kcp.Rx_rto) >> 3
+	}
+
+	// 记录发生了超时重传
+	bLost := false
+
+	change := false
+
+	// 检查缓存队列(snd_buf)当前需要发送的数据(新的数据和重传的数据)
+	for _, segment := range kcp.Snd_buf {
+		// 判断当前数据需不需要发送
+		needSend := false
+		if segment.Xmit == 0 {
+			needSend = true
+			segment.Xmit++                   // 发送分片的次数++
+			segment.Rto = uint32(kcp.Rx_rto) // 当前分片的超时时间戳
+			// 下面我理解为分片下次超时重传的时间，和启用快速模式也有关系
+			segment.ReSendTs = kcp.Current + segment.Rto + uint32(rtomin)
+		} else if kcp.Current >= segment.ReSendTs {
+			// 当前时间已经超过seg的下次重传时间了
+			needSend = true
+			segment.Xmit++ // 超时次数+1
+			kcp.Xmit++
+			if kcp.Nodelay == 0 {
+				// 不启动快速重传, 每次重传之后rto时间是之前的2倍
+				segment.Rto += lib.MaxUint32(segment.Rto, uint32(kcp.Rx_rto))
+			} else {
+				// 启动快速重传, rto时间变成1.5倍
+				step := kcp.Rx_rto
+				if kcp.Nodelay < 2 {
+					step = int32(segment.Rto)
+				}
+				segment.Rto += uint32(step) / 2
+			}
+			// 更新下一次重传的时间戳
+			segment.ReSendTs = kcp.Current + segment.Rto
+			bLost = true
+		} else if int(segment.FastACK) >= resent {
+			// 该分片被跳过的次数超过重传次数
+			if segment.Xmit <= uint32(kcp.FastLimit) || kcp.FastLimit <= 0 {
+				needSend = true
+				segment.Xmit++
+				segment.FastACK = 0
+				segment.ReSendTs = kcp.Current + segment.Rto
+				change = true
+			}
+		}
+
+		if needSend {
+			segment.Ts = kcp.Current
+			segment.Wnd = seg.Wnd     // 剩余接收窗口大小
+			segment.Una = kcp.Rcv_nxt // 待接收消息序号
+
+			need := IKCP_OVERHEAD + segment.Len
+
+			if len(outputBuffer)+int(need) > int(kcp.Mtu) {
+				kcp.Output(outputBuffer, len(outputBuffer), kcp, kcp.User)
+				outputBuffer = make([]byte, 0)
+			}
+			// 序列化头
+			outputBuffer = append(outputBuffer, segment.Encode()...)
+			// 序列化数据
+			if segment.Len > 0 {
+				outputBuffer = append(outputBuffer, segment.Data...)
+			}
+
+			if segment.Xmit >= kcp.Dead_link {
+				kcp.State = -1
+			}
+		}
+	}
+
+	// 刷新重传seg
+	if len(outputBuffer) > 0 {
+		kcp.Output(outputBuffer, len(outputBuffer), kcp, kcp.User)
+	}
+
+	// 更新ssthresh(慢启动阈值)
+	if change {
+		// 如果该分片被跳过的次数超过重传次数
+		inflight := kcp.Snd_nxt - kcp.Snd_una
+		kcp.Ssthresh = inflight / 2
+		if kcp.Ssthresh < IKCP_THRESH_MIN {
+			kcp.Ssthresh = IKCP_THRESH_MIN
+		}
+		kcp.Cwnd = kcp.Ssthresh + uint32(resent)
+		kcp.Incr = kcp.Cwnd * kcp.Mss
+	}
+
+	if bLost {
+		// 如果发生了超时重传
+		kcp.Ssthresh = cwnd / 2
+		if kcp.Ssthresh < IKCP_THRESH_MIN {
+			kcp.Ssthresh = IKCP_THRESH_MIN
+		}
+		kcp.Cwnd = 1
+		kcp.Incr = kcp.Mss
+	}
+
+	if kcp.Cwnd < 1 {
+		kcp.Cwnd = 1
+		kcp.Incr = kcp.Mss
+	}
+
 }
 
 // 检查接收队列中下一条消息的大小
