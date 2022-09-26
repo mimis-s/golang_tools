@@ -96,9 +96,10 @@ func (kcp *IKCPCB) Check(current uint32) {
 // 读取下层UDP输入数据,传入KCP结构,如果是数据就放入接收缓冲区,如果是ack就在发送缓冲区标记对应报文段已送达
 func (kcp *IKCPCB) Input(data []byte) int {
 
-	// prev_una := kcp.Snd_una // prev_una发送端缓冲区最小未接收una
-	// maxack := uint32(0)     // 接收到最大的一个ack序列号sn
-	// latest_ts := uint32(0)  // 这个ack消息对应的发送时间戳ts
+	prev_una := kcp.Snd_una // prev_una发送端缓冲区最小未接收una
+	maxack := uint32(0)     // 接收到最大的一个ack序列号sn
+	latest_ts := uint32(0)  // 这个ack消息对应的发送时间戳ts
+	flag := 0
 
 	dataSize := len(data)
 	// 判断数据长度是否合法
@@ -148,7 +149,80 @@ func (kcp *IKCPCB) Input(data []byte) int {
 		kcp.Shrink_Buf()
 
 		// 判断四种接收报文类型(这里把原本的if else判断改为了map映射)
-		mapCmd_Type[seg.Cmd](kcp, seg)
+		// mapCmd_Type[seg.Cmd](kcp, seg)
+		if seg.Cmd == IKCP_CMD_ACK {
+			// 如果当前时间大于等于对方发送消息时间,则更新ack,这里面包含了大量的计算,主要用于计算超时重传rx_rto
+			if kcp.Current >= seg.Ts {
+				kcp.Update_Ack(int32(kcp.Current - seg.Ts))
+			}
+			kcp.Parse_Ack(seg.Sn)
+			kcp.Shrink_Buf()
+			if flag == 0 {
+				flag = 1
+				maxack = seg.Sn
+				latest_ts = seg.Ts
+			} else {
+				if seg.Sn > maxack {
+					if seg.Ts > latest_ts {
+						maxack = seg.Sn
+						latest_ts = seg.Ts
+					}
+				}
+			}
+			// 日志打印
+		} else if seg.Cmd == IKCP_CMD_PUSH {
+			// 日志打印
+			if seg.Sn < kcp.Rcv_nxt+kcp.Rcv_wnd {
+				// 加入acklist
+				kcp.Ack_Push(seg.Sn, seg.Ts)
+				if seg.Sn >= kcp.Rcv_nxt {
+					if seg.Len > 0 {
+						seg.Data = data
+					}
+					kcp.Parse_Data(seg)
+				}
+			}
+		} else if seg.Cmd == IKCP_CMD_WASK {
+			// 窗口探测消息,告诉远端我的窗口大小
+			kcp.Probe |= IKCP_ASK_TELL
+		} else if seg.Cmd == IKCP_CMD_WINS {
+			// 什么事情也不做
+		} else {
+			return -3
+		}
+
+		// 读取数据往后挪动
+		data = data[seg.Len:]
+	}
+
+	if flag != 0 {
+		kcp.Parse_Faskack(maxack, latest_ts)
+	}
+
+	if kcp.Snd_una > prev_una {
+		if kcp.Cwnd < kcp.Rmt_wnd {
+			mss := kcp.Mss
+			if kcp.Cwnd < kcp.Ssthresh {
+				kcp.Cwnd++
+				kcp.Incr += mss
+			} else {
+				if kcp.Incr < mss {
+					kcp.Incr = mss
+				}
+				kcp.Incr += (mss*mss)/kcp.Incr + (mss / 16)
+				if (kcp.Cwnd+1)*mss <= kcp.Incr {
+					temp := uint32(1)
+					if mss > 0 {
+						temp = mss
+					}
+					kcp.Cwnd = (kcp.Incr + mss - 1) / temp
+				}
+			}
+			if kcp.Cwnd > kcp.Rmt_wnd {
+				kcp.Cwnd = kcp.Rmt_wnd
+				kcp.Incr = kcp.Rmt_wnd * mss
+			}
+		}
 	}
 
 	// 解析data数据到IKCPSEG结构

@@ -47,6 +47,81 @@ func (kcp *IKCPCB) Update_Ack(rtt int32) {
 	kcp.Rx_rto = lib.MinInt32(lib.MaxInt32(kcp.Rx_minrto, int32(rto)), int32(IKCP_RTO_MAX))
 }
 
+func (kcp *IKCPCB) Parse_Ack(sn uint32) {
+	if sn < kcp.Snd_una || sn >= kcp.Snd_nxt {
+		return
+	}
+
+	for index, seg := range kcp.Snd_buf {
+		if sn == seg.Sn {
+			kcp.Snd_buf = append(kcp.Snd_buf[:index], kcp.Snd_buf[index+1:]...)
+			kcp.Nsnd_buf--
+			break
+		}
+		if sn < seg.Sn {
+			break
+		}
+	}
+}
+
+func (kcp *IKCPCB) Ack_Push(sn uint32, ts uint32) {
+	// 原版这里要判断给acklist扩容,但是go里面切片不需要我们手动扩容
+	kcp.AckList[kcp.AckCount*2] = sn
+	kcp.AckList[kcp.AckCount*2+1] = ts
+	kcp.AckCount++
+}
+
+func (kcp *IKCPCB) Parse_Data(newSeg *IKCPSEG) {
+	repeat := 0
+	if newSeg.Sn >= kcp.Rcv_nxt+kcp.Rcv_wnd || newSeg.Sn < kcp.Rcv_nxt {
+		return
+	}
+
+	for _, seg := range kcp.Rcv_buf {
+		if seg.Sn == newSeg.Sn {
+			repeat = 1
+			break
+		}
+		if newSeg.Sn > seg.Sn {
+			break
+		}
+	}
+
+	if repeat == 0 {
+		kcp.Rcv_buf = append(kcp.Rcv_buf, *newSeg)
+		kcp.Nrcv_buf++
+	} else {
+		return
+	}
+
+	// 将可用数据移动rcv_buf -> rcv_queue
+	for index, seg := range kcp.Rcv_buf {
+		if seg.Sn == kcp.Rcv_nxt && kcp.Nrcv_que < kcp.Rcv_wnd {
+			kcp.Rcv_queue = append(kcp.Rcv_queue, seg)
+			kcp.Rcv_buf = append(kcp.Rcv_buf[:index], kcp.Rcv_buf[index+1:]...)
+			kcp.Nrcv_buf--
+			kcp.Nrcv_que++
+			kcp.Rcv_nxt++
+		} else {
+			break
+		}
+	}
+}
+
+func (kcp *IKCPCB) Parse_Faskack(sn, ts uint32) {
+	if sn < kcp.Snd_una || sn >= kcp.Snd_nxt {
+		return
+	}
+
+	for _, seg := range kcp.Snd_buf {
+		if sn < seg.Sn {
+			break
+		} else if sn != seg.Sn {
+			seg.FastACK++
+		}
+	}
+}
+
 /*
 	--------------------四种数据类型实现-------------------------
 	IKCP_CMD_ACK, IKCP_CMD_PUSH, IKCP_CMD_WASK, IKCP_CMD_WINS
@@ -58,6 +133,9 @@ func cmdAck(kcp *IKCPCB, seg *IKCPSEG) {
 	if kcp.Current >= seg.Ts {
 		kcp.Update_Ack(int32(kcp.Current - seg.Ts))
 	}
+	kcp.Parse_Ack(seg.Sn)
+	kcp.Shrink_Buf()
+
 }
 
 // push
