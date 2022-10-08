@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"unsafe"
 
-	"gitee.com/mimis/golang-tool/lib"
+	"github.com/mimis-s/golang_tools/lib"
 )
 
 type cmdFunc func(*IKCPCB, *IKCPSEG)

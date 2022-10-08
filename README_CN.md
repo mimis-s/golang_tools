@@ -5,7 +5,7 @@
 
 #### 安装教程
 
-go get gitee.com/mimis/golang-tool
+go get github.com/mimis-s/golang_tools
 
 #### 使用说明
 
@@ -14,6 +14,6 @@ go get gitee.com/mimis/golang-tool
     Listen接口主要是开启网络服务，监听，收发消息
 
 2.  rpcx库主要封装了rpcx服务器的创建，运行接口，客户端创建，调用接口，代码简单明了，
-    详细使用可参考protobuf插件集成rpcx: https://gitee.com/mimis/protoc-gen-rpcx
+    详细使用可参考protobuf插件集成rpcx: https://github.com/mimis-s/protoc-gen-rpcx
 
 3.  dfs封装了s3,cloud storage, minio三个分布式文件存储系统的集成api
