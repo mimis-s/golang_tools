@@ -21,7 +21,7 @@ func (h *Http) SetAddr(addr, protocol string, callBack clientConn.CallBackFunc) 
 	h.Addr = addr
 	h.Protocol = protocol
 	h.CallBack = callBack
-	h.GinEngine = gin.Default()
+	h.GinEngine = gin.New()
 }
 
 func (h *Http) Listen() error {
