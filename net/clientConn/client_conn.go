@@ -15,6 +15,9 @@ type ClientMsg struct {
 	Msg []byte
 }
 
+type ConnInterface interface {
+}
+
 type ClientConn struct {
 	conn      net.Conn
 	inStream  *bufio.Reader
@@ -96,7 +99,7 @@ func (c *ClientConn) DeliverRecvMsg(call CallBackFunc) {
 	}
 }
 
-// 发送消息
+// 把消息发送给客户端
 func (c *ClientConn) WriteMsg() {
 	for {
 		select {
