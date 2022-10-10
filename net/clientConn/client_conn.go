@@ -3,20 +3,9 @@ package clientConn
 import (
 	"bufio"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
-
-	"golang.org/x/net/websocket"
-)
-
-// 序列化方式
-type Enum_SerializationMethod int
-
-const (
-	Enum_SerializationMethod_JSON  Enum_SerializationMethod = 1 // json
-	Enum_SerializationMethod_PROTO Enum_SerializationMethod = 1 // protobuf
+	"net"
 )
 
 type CallBackFunc func(*ClientMsg) (*ClientMsg, error)
@@ -26,27 +15,19 @@ type ClientMsg struct {
 	Msg []byte
 }
 
-type ConnInterface interface {
-	Read(p []byte) (n int, err error)
-	Write(b []byte) (n int, err error)
-	Close() error
-}
-
 type ClientConn struct {
-	conn                     ConnInterface
-	inStream                 *bufio.Reader
-	recvQueue                chan *ClientMsg // 接收队列
-	sendQueue                chan []byte     // 发送队列
-	Enum_SerializationMethod                 // 序列化方式
+	conn      net.Conn
+	inStream  *bufio.Reader
+	recvQueue chan *ClientMsg // 接收队列
+	sendQueue chan []byte     // 发送队列
 }
 
-func NewClientConn(conn ConnInterface, method Enum_SerializationMethod) *ClientConn {
+func NewClientConn(conn net.Conn) *ClientConn {
 	return &ClientConn{
-		conn:                     conn,
-		inStream:                 bufio.NewReader(conn),
-		recvQueue:                make(chan *ClientMsg),
-		sendQueue:                make(chan []byte),
-		Enum_SerializationMethod: method,
+		conn:      conn,
+		inStream:  bufio.NewReader(conn),
+		recvQueue: make(chan *ClientMsg),
+		sendQueue: make(chan []byte),
 	}
 }
 
@@ -83,89 +64,17 @@ func (c *ClientConn) WriteBytesClientMsg(tag int, msg []byte) ([]byte, error) {
 	return buf, nil
 }
 
-// json
-func (c *ClientConn) ReadJsonClientMsg() (*ClientMsg, error) {
-
-	conn := c.conn.(*websocket.Conn)
-	msg := ""
-	err := websocket.Message.Receive(conn, &msg)
-	if err != nil {
-		// 服务器主动断开
-		c.conn.Close()
-		return nil, err
-	}
-
-	req := make(map[string]string)
-	err = json.Unmarshal([]byte(msg), &req)
-	if err != nil {
-		err = fmt.Errorf("unmarshal request message error:%v", err)
-		c.conn.Write([]byte(err.Error()))
-		return nil, err
-	}
-	msgID, find := req["msg_id"]
-	if !find {
-		err = fmt.Errorf("not found msg id:%v", msg)
-		c.conn.Write([]byte(err.Error()))
-		return nil, err
-	}
-
-	tag, err := strconv.Atoi(msgID)
-	if err != nil {
-		err = fmt.Errorf("msg id is not integer:%v", msg)
-		c.conn.Write([]byte(err.Error()))
-		return nil, err
-	}
-
-	payload, find := req["payload"]
-	if !find {
-		err = fmt.Errorf("not found msg:%v", msg)
-		c.conn.Write([]byte(err.Error()))
-		return nil, err
-	}
-
-	return &ClientMsg{
-		Tag: tag,
-		Msg: []byte(payload),
-	}, nil
-}
-
-func (c *ClientConn) WriteJsonClientMsg(tag int, msg []byte) ([]byte, error) {
-	res := make(map[string]interface{})
-	err := json.Unmarshal(msg, &res)
-	if err != nil {
-		return nil, fmt.Errorf("json unmarshal error:%v", err)
-	}
-	buf := map[string]interface{}{
-		"msg_id":  tag,
-		"payload": res,
-	}
-	sendMsg, err := json.Marshal(&buf)
-	if err != nil {
-		return nil, fmt.Errorf("json marshal error:%v", err)
-	}
-	return sendMsg, nil
-}
-
 // 解析消息
 func (c *ClientConn) ReadRecvMsg() {
 	for {
 		var err error
 		var packet *ClientMsg
 
-		if c.Enum_SerializationMethod == Enum_SerializationMethod_JSON {
-			packet, err = c.ReadJsonClientMsg()
-			if err != nil {
-				fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)
-				c.conn.Close()
-				break
-			}
-		} else {
-			packet, err = c.ReadBytesClientMsg()
-			if err != nil {
-				fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)
-				c.conn.Close()
-				break
-			}
+		packet, err = c.ReadBytesClientMsg()
+		if err != nil {
+			fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)
+			c.conn.Close()
+			break
 		}
 
 		// 把解析出来的消息传递给处理线程
@@ -190,11 +99,7 @@ func (c *ClientConn) DeliverRecvMsg(call CallBackFunc) {
 			}
 
 			var buf []byte
-			if c.Enum_SerializationMethod == Enum_SerializationMethod_PROTO {
-				buf, err = c.WriteBytesClientMsg(res.Tag, res.Msg)
-			} else {
-				buf, err = c.WriteJsonClientMsg(res.Tag, res.Msg)
-			}
+			buf, err = c.WriteBytesClientMsg(res.Tag, res.Msg)
 			if err != nil {
 				fmt.Printf("client msg is err:%v\n", err)
 				continue

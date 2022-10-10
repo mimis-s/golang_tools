@@ -35,7 +35,7 @@ func (t *Tcp) Listen() error {
 			fmt.Printf("client[%v] accept is err[%v]\n", conn.RemoteAddr().String(), err)
 			continue
 		}
-		clientConn := clientConn.NewClientConn(conn, clientConn.Enum_SerializationMethod_PROTO)
+		clientConn := clientConn.NewClientConn(conn)
 		go clientConn.ReadRecvMsg()
 		go clientConn.DeliverRecvMsg(t.CallBack)
 		go clientConn.WriteMsg()

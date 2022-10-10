@@ -34,10 +34,10 @@ func (h *Http) Listen() error {
 			}
 		}
 	}(func(conn *websocket.Conn) {
-		clientConn := clientConn.NewClientConn(conn, clientConn.Enum_SerializationMethod_JSON)
-		go clientConn.ReadRecvMsg()
-		go clientConn.DeliverRecvMsg(h.CallBack)
-		go clientConn.WriteMsg()
+		clientConn := clientConn.NewClientConn_http(conn)
+		go clientConn.ReadRecvMsg_http()
+		go clientConn.DeliverRecvMsg_http(h.CallBack)
+		go clientConn.WriteMsg_http()
 	}))
 	return h.GinEngine.Run(h.Addr)
 }
