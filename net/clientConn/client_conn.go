@@ -90,7 +90,7 @@ func (c *ClientConn) ReadJsonClientMsg() (*ClientMsg, error) {
 	if err != nil {
 		// 服务器主动断开
 		c.conn.Close()
-		return nil, nil
+		return nil, err
 	}
 
 	req := make(map[string]string)
