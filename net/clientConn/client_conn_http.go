@@ -87,6 +87,9 @@ func (c *ClientConn_http) WriteJsonClientMsg(tag int, msg []byte) ([]byte, error
 
 // 解析消息
 func (c *ClientConn_http) ReadRecvMsg_http() {
+	defer func() {
+		c.conn.Close()
+	}()
 	for {
 		var err error
 		var packet *ClientMsg
@@ -105,6 +108,9 @@ func (c *ClientConn_http) ReadRecvMsg_http() {
 
 // 处理消息
 func (c *ClientConn_http) DeliverRecvMsg_http(call CallBackFunc) {
+	defer func() {
+		c.conn.Close()
+	}()
 	for {
 		select {
 		case msg, ok := <-c.recvQueue:
@@ -133,6 +139,9 @@ func (c *ClientConn_http) DeliverRecvMsg_http(call CallBackFunc) {
 
 // 把消息发送给客户端
 func (c *ClientConn_http) WriteMsg_http() {
+	defer func() {
+		c.conn.Close()
+	}()
 	for {
 		select {
 		case sendMsg, ok := <-c.sendQueue:
