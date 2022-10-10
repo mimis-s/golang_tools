@@ -33,14 +33,14 @@ type ConnInterface interface {
 }
 
 type ClientConn struct {
-	conn                     ConnInterface
+	conn                     *websocket.Conn
 	inStream                 *bufio.Reader
 	recvQueue                chan *ClientMsg // 接收队列
 	sendQueue                chan []byte     // 发送队列
 	Enum_SerializationMethod                 // 序列化方式
 }
 
-func NewClientConn(conn ConnInterface, method Enum_SerializationMethod) *ClientConn {
+func NewClientConn(conn *websocket.Conn, method Enum_SerializationMethod) *ClientConn {
 	return &ClientConn{
 		conn:                     conn,
 		inStream:                 bufio.NewReader(conn),
@@ -86,9 +86,8 @@ func (c *ClientConn) WriteBytesClientMsg(tag int, msg []byte) ([]byte, error) {
 // json
 func (c *ClientConn) ReadJsonClientMsg() (*ClientMsg, error) {
 
-	conn := c.conn.(*websocket.Conn)
 	msg := ""
-	err := websocket.Message.Receive(conn, &msg)
+	err := websocket.Message.Receive(c.conn, &msg)
 	if err != nil {
 		// 服务器主动断开
 		c.conn.Close()
