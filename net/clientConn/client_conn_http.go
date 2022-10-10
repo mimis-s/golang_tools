@@ -70,9 +70,11 @@ func (c *ClientConn_http) ReadJsonClientMsg() (*ClientMsg, error) {
 
 func (c *ClientConn_http) WriteJsonClientMsg(tag int, msg []byte) ([]byte, error) {
 	res := make(map[string]interface{})
-	err := json.Unmarshal(msg, &res)
-	if err != nil {
-		return nil, fmt.Errorf("json unmarshal error:%v", err)
+	if len(msg) != 0 {
+		err := json.Unmarshal(msg, &res)
+		if err != nil {
+			return nil, fmt.Errorf("json unmarshal error:%v", err)
+		}
 	}
 	buf := map[string]interface{}{
 		"msg_id":  tag,
