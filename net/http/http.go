@@ -34,7 +34,7 @@ func (h *Http) Listen() error {
 			}
 		}
 	}(func(conn *websocket.Conn) {
-		clientConn := clientConn.NewClientConn(conn)
+		clientConn := clientConn.NewClientConn(conn, clientConn.Enum_SerializationMethod_JSON)
 		go clientConn.ReadRecvMsg()
 		go clientConn.DeliverRecvMsg(h.CallBack)
 		go clientConn.WriteMsg()
