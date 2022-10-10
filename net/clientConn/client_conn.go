@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"strconv"
 
 	"golang.org/x/net/websocket"
@@ -28,17 +27,20 @@ type ClientMsg struct {
 }
 
 type ConnInterface interface {
+	Read(p []byte) (n int, err error)
+	Write(b []byte) (n int, err error)
+	Close() error
 }
 
 type ClientConn struct {
-	conn                     net.Conn
+	conn                     ConnInterface
 	inStream                 *bufio.Reader
 	recvQueue                chan *ClientMsg // 接收队列
 	sendQueue                chan []byte     // 发送队列
 	Enum_SerializationMethod                 // 序列化方式
 }
 
-func NewClientConn(conn net.Conn, method Enum_SerializationMethod) *ClientConn {
+func NewClientConn(conn ConnInterface, method Enum_SerializationMethod) *ClientConn {
 	return &ClientConn{
 		conn:                     conn,
 		inStream:                 bufio.NewReader(conn),
@@ -215,7 +217,7 @@ func (c *ClientConn) WriteMsg() {
 			// 发送给客户端
 			_, err := c.conn.Write(sendMsg)
 			if err != nil {
-				fmt.Printf("[net core]conn[%v] write msg error:%v\n", c.conn.RemoteAddr().String(), err)
+				fmt.Printf("[net write msg error:%v\n", err)
 			}
 		}
 	}
