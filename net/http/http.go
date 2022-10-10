@@ -2,10 +2,11 @@ package http
 
 import (
 	"net"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"github.com/mimis-s/golang_tools/net/clientConn"
-	"golang.org/x/net/websocket"
 )
 
 type Http struct {
@@ -24,20 +25,19 @@ func (h *Http) SetAddr(addr, protocol string, callBack clientConn.CallBackFunc) 
 	h.GinEngine = gin.New()
 }
 
+func (h *Http) wsHandler(c *gin.Context) {
+	conn, err := (&websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		http.NotFound(c.Writer, c.Request)
+		return
+	}
+	clientConn := clientConn.NewClientConn_http(conn)
+	go clientConn.ReadRecvMsg_http()
+	go clientConn.DeliverRecvMsg_http(h.CallBack)
+	go clientConn.WriteMsg_http()
+}
+
 func (h *Http) Listen() error {
-	h.GinEngine.GET("/ws", func(handler websocket.Handler) gin.HandlerFunc {
-		return func(ctx *gin.Context) {
-			if ctx.IsWebsocket() {
-				handler.ServeHTTP(ctx.Writer, ctx.Request)
-			} else {
-				_, _ = ctx.Writer.WriteString("not websocket request")
-			}
-		}
-	}(func(conn *websocket.Conn) {
-		clientConn := clientConn.NewClientConn_http(conn)
-		go clientConn.ReadRecvMsg_http()
-		go clientConn.DeliverRecvMsg_http(h.CallBack)
-		go clientConn.WriteMsg_http()
-	}))
+	h.GinEngine.GET("/ws", h.wsHandler)
 	return h.GinEngine.Run(h.Addr)
 }

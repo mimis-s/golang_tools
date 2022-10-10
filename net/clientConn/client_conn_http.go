@@ -1,17 +1,15 @@
 package clientConn
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"strconv"
 
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 )
 
 type ClientConn_http struct {
 	conn      *websocket.Conn
-	inStream  *bufio.Reader
 	recvQueue chan *ClientMsg // 接收队列
 	sendQueue chan []byte     // 发送队列
 }
@@ -19,7 +17,6 @@ type ClientConn_http struct {
 func NewClientConn_http(conn *websocket.Conn) *ClientConn_http {
 	return &ClientConn_http{
 		conn:      conn,
-		inStream:  bufio.NewReader(conn),
 		recvQueue: make(chan *ClientMsg),
 		sendQueue: make(chan []byte),
 	}
@@ -27,9 +24,7 @@ func NewClientConn_http(conn *websocket.Conn) *ClientConn_http {
 
 // json
 func (c *ClientConn_http) ReadJsonClientMsg() (*ClientMsg, error) {
-
-	msg := ""
-	err := websocket.Message.Receive(c.conn, &msg)
+	_, msg, err := c.conn.ReadMessage()
 	if err != nil {
 		// 服务器主动断开
 		c.conn.Close()
@@ -37,30 +32,30 @@ func (c *ClientConn_http) ReadJsonClientMsg() (*ClientMsg, error) {
 	}
 
 	req := make(map[string]string)
-	err = json.Unmarshal([]byte(msg), &req)
+	err = json.Unmarshal(msg, &req)
 	if err != nil {
 		err = fmt.Errorf("unmarshal request message error:%v", err)
-		c.conn.Write([]byte(err.Error()))
+		c.conn.WriteMessage(websocket.CloseMessage, []byte(err.Error()))
 		return nil, err
 	}
 	msgID, find := req["msg_id"]
 	if !find {
 		err = fmt.Errorf("not found msg id:%v", msg)
-		c.conn.Write([]byte(err.Error()))
+		c.conn.WriteMessage(websocket.CloseMessage, []byte(err.Error()))
 		return nil, err
 	}
 
 	tag, err := strconv.Atoi(msgID)
 	if err != nil {
 		err = fmt.Errorf("msg id is not integer:%v", msg)
-		c.conn.Write([]byte(err.Error()))
+		c.conn.WriteMessage(websocket.CloseMessage, []byte(err.Error()))
 		return nil, err
 	}
 
 	payload, find := req["payload"]
 	if !find {
 		err = fmt.Errorf("not found msg:%v", msg)
-		c.conn.Write([]byte(err.Error()))
+		c.conn.WriteMessage(websocket.CloseMessage, []byte(err.Error()))
 		return nil, err
 	}
 
@@ -143,7 +138,7 @@ func (c *ClientConn_http) WriteMsg_http() {
 			}
 
 			// 发送给客户端
-			_, err := c.conn.Write(sendMsg)
+			err := c.conn.WriteMessage(websocket.TextMessage, sendMsg)
 			if err != nil {
 				fmt.Printf("[net write msg error:%v\n", err)
 			}
