@@ -90,7 +90,7 @@ func (c *ClientConn_http) ReadRecvMsg_http() {
 	for {
 		var err error
 		var packet *ClientMsg
-
+		c.conn.PongHandler()
 		packet, err = c.ReadJsonClientMsg()
 		if err != nil {
 			fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)

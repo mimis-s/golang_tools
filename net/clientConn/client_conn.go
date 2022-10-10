@@ -69,7 +69,6 @@ func (c *ClientConn) ReadRecvMsg() {
 	for {
 		var err error
 		var packet *ClientMsg
-
 		packet, err = c.ReadBytesClientMsg()
 		if err != nil {
 			fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)
