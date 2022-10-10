@@ -26,9 +26,12 @@ func NewClientConn_http(conn *websocket.Conn) *ClientConn_http {
 func (c *ClientConn_http) ReadJsonClientMsg() (*ClientMsg, error) {
 	_, msg, err := c.conn.ReadMessage()
 	if err != nil {
+		errStr := fmt.Sprintf("read message is err:%v", err)
+		fmt.Println(errStr)
 		// 服务器主动断开
 		c.conn.Close()
-		return nil, err
+
+		return nil, fmt.Errorf(errStr)
 	}
 
 	req := make(map[string]string)
