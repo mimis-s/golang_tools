@@ -8,7 +8,13 @@ import (
 	"net"
 )
 
-type CallBackFunc func(*ClientMsg) (*ClientMsg, error)
+type ClientSession interface {
+	ConnectCallBack()                               // 客户端连接回调
+	RequestCallBack(*ClientMsg) (*ClientMsg, error) // 消息处理的回调
+	DisConnectCallBack()                            // 客户端断开连接回调
+}
+
+// type CallBackFunc func(*ClientMsg) (*ClientMsg, error)
 
 type ClientMsg struct {
 	Tag int
@@ -18,14 +24,16 @@ type ClientMsg struct {
 type ClientConn struct {
 	conn      net.Conn
 	inStream  *bufio.Reader
+	session   ClientSession
 	recvQueue chan *ClientMsg // 接收队列
 	sendQueue chan []byte     // 发送队列
 }
 
-func NewClientConn(conn net.Conn) *ClientConn {
+func NewClientConn(conn net.Conn, session ClientSession) *ClientConn {
 	return &ClientConn{
 		conn:      conn,
 		inStream:  bufio.NewReader(conn),
+		session:   session,
 		recvQueue: make(chan *ClientMsg),
 		sendQueue: make(chan []byte),
 	}
@@ -73,6 +81,7 @@ func (c *ClientConn) ReadRecvMsg() {
 		if err != nil {
 			fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)
 			c.conn.Close()
+			c.session.DisConnectCallBack()
 			break
 		}
 
@@ -82,7 +91,7 @@ func (c *ClientConn) ReadRecvMsg() {
 }
 
 // 处理消息
-func (c *ClientConn) DeliverRecvMsg(call CallBackFunc) {
+func (c *ClientConn) DeliverRecvMsg() {
 	for {
 		select {
 		case msg, ok := <-c.recvQueue:
@@ -91,7 +100,7 @@ func (c *ClientConn) DeliverRecvMsg(call CallBackFunc) {
 			}
 
 			// 调用回调函数
-			res, err := call(msg)
+			res, err := c.session.RequestCallBack(msg)
 			if err != nil {
 				fmt.Printf("client msg is err:%v\n", err)
 				continue

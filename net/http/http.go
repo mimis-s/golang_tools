@@ -9,19 +9,25 @@ import (
 	"github.com/mimis-s/golang_tools/net/clientConn"
 )
 
+// type ClientSession interface {
+// 	ConnectCallBack()                               // 客户端连接回调
+// 	RequestCallBack(*ClientMsg) (*ClientMsg, error) // 消息处理的回调
+// 	DisConnectCallBack()                            // 客户端断开连接回调
+// }
+
 type Http struct {
 	Addr      string
 	Protocol  string
 	GinEngine *gin.Engine
 	Conn      net.Conn
 
-	CallBack clientConn.CallBackFunc
+	Session clientConn.ClientSession
 }
 
-func (h *Http) SetAddr(addr, protocol string, callBack clientConn.CallBackFunc) {
+func (h *Http) SetAddr(addr, protocol string, session clientConn.ClientSession) {
 	h.Addr = addr
 	h.Protocol = protocol
-	h.CallBack = callBack
+	h.Session = session
 	h.GinEngine = gin.New()
 }
 
@@ -31,9 +37,9 @@ func (h *Http) wsHandler(c *gin.Context) {
 		http.NotFound(c.Writer, c.Request)
 		return
 	}
-	clientConn := clientConn.NewClientConn_http(conn)
+	clientConn := clientConn.NewClientConn_http(conn, h.Session)
 	go clientConn.ReadRecvMsg_http()
-	go clientConn.DeliverRecvMsg_http(h.CallBack)
+	go clientConn.DeliverRecvMsg_http()
 	go clientConn.WriteMsg_http()
 }
 
