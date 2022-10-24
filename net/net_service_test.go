@@ -14,7 +14,7 @@ func (s *TcpSession) ConnectCallBack() {
 
 }
 
-func (s *TcpSession) RequestCallBack(reqClient *clientConn.ClientMsg) (*clientConn.ClientMsg, error) {
+func (s *TcpSession) RequestCallBack(reqClient *clientConn.ClientMsg, conn interface{}) (*clientConn.ClientMsg, error) {
 	fmt.Printf("client send tag:%v message:%s\n", reqClient.Tag, reqClient.Msg)
 	return &clientConn.ClientMsg{
 		Tag: 1,

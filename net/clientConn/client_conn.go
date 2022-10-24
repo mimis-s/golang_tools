@@ -9,9 +9,9 @@ import (
 )
 
 type ClientSession interface {
-	ConnectCallBack()                               // 客户端连接回调
-	RequestCallBack(*ClientMsg) (*ClientMsg, error) // 消息处理的回调
-	DisConnectCallBack()                            // 客户端断开连接回调
+	ConnectCallBack()                                            // 客户端连接回调
+	RequestCallBack(*ClientMsg, interface{}) (*ClientMsg, error) // 消息处理的回调, 把conn连接也传入进去
+	DisConnectCallBack()                                         // 客户端断开连接回调
 }
 
 // type CallBackFunc func(*ClientMsg) (*ClientMsg, error)
@@ -100,7 +100,7 @@ func (c *ClientConn) DeliverRecvMsg() {
 			}
 
 			// 调用回调函数
-			res, err := c.session.RequestCallBack(msg)
+			res, err := c.session.RequestCallBack(msg, c.conn)
 			if err != nil {
 				fmt.Printf("client msg is err:%v\n", err)
 				continue

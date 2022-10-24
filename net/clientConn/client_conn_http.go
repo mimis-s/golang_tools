@@ -126,7 +126,7 @@ func (c *ClientConn_http) DeliverRecvMsg_http() {
 			}
 
 			// 调用回调函数
-			res, err := c.session.RequestCallBack(msg)
+			res, err := c.session.RequestCallBack(msg, c.conn)
 			if err != nil {
 				fmt.Printf("client msg is err:%v\n", err)
 				continue
