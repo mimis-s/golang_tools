@@ -35,7 +35,7 @@ func (c *ClientConn_http) GetConn() interface{} {
 }
 
 // json
-func (c *ClientConn_http) ReadJsonClientMsg() (*ClientMsg, error) {
+func (c *ClientConn_http) uncode() (*ClientMsg, error) {
 	_, msg, err := c.conn.ReadMessage()
 	if err != nil {
 		errStr := fmt.Sprintf("read message is err:%v", err)
@@ -80,7 +80,7 @@ func (c *ClientConn_http) ReadJsonClientMsg() (*ClientMsg, error) {
 	}, nil
 }
 
-func (c *ClientConn_http) WriteJsonClientMsg(tag int, msg []byte) ([]byte, error) {
+func (c *ClientConn_http) decode(tag int, msg []byte) ([]byte, error) {
 	res := make(map[string]interface{})
 	if len(msg) != 0 {
 		err := json.Unmarshal(msg, &res)
@@ -99,6 +99,19 @@ func (c *ClientConn_http) WriteJsonClientMsg(tag int, msg []byte) ([]byte, error
 	return sendMsg, nil
 }
 
+// 外部调用发送消息
+func (c *ClientConn_http) SendMsg(res *ClientMsg) error {
+	var buf []byte
+	buf, err := c.decode(res.Tag, res.Msg)
+	if err != nil {
+		errStr := fmt.Sprintf("client msg is err:%v\n", err)
+		return fmt.Errorf(errStr)
+	}
+
+	c.sendQueue <- buf
+	return nil
+}
+
 // 解析消息
 func (c *ClientConn_http) ReadRecvMsg_http(session ClientSession) {
 	defer func() {
@@ -109,7 +122,7 @@ func (c *ClientConn_http) ReadRecvMsg_http(session ClientSession) {
 		var err error
 		var packet *ClientMsg
 		c.conn.PongHandler()
-		packet, err = c.ReadJsonClientMsg()
+		packet, err = c.uncode()
 		if err != nil {
 			fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)
 			c.conn.Close()
@@ -142,7 +155,7 @@ func (c *ClientConn_http) DeliverRecvMsg_http(session ClientSession) {
 			}
 
 			var buf []byte
-			buf, err = c.WriteJsonClientMsg(res.Tag, res.Msg)
+			buf, err = c.decode(res.Tag, res.Msg)
 			if err != nil {
 				fmt.Printf("client msg is err:%v\n", err)
 				continue

@@ -42,7 +42,7 @@ func (c *ClientConn_tcp) GetConn() interface{} {
 }
 
 // 字节流
-func (c *ClientConn_tcp) ReadBytesClientMsg() (*ClientMsg, error) {
+func (c *ClientConn_tcp) uncode() (*ClientMsg, error) {
 
 	head := make([]byte, 8)
 	//ID和长度
@@ -65,7 +65,7 @@ func (c *ClientConn_tcp) ReadBytesClientMsg() (*ClientMsg, error) {
 	}, nil
 }
 
-func (c *ClientConn_tcp) WriteBytesClientMsg(tag int, msg []byte) ([]byte, error) {
+func (c *ClientConn_tcp) decode(tag int, msg []byte) ([]byte, error) {
 	// 将消息封装起来(id + 长度 + 消息)
 	buf := make([]byte, 0, 8+len(msg))
 	binary.BigEndian.PutUint32(buf[:4], uint32(tag))      // id占4个字节
@@ -74,12 +74,25 @@ func (c *ClientConn_tcp) WriteBytesClientMsg(tag int, msg []byte) ([]byte, error
 	return buf, nil
 }
 
+// 外部调用发送消息
+func (c *ClientConn_tcp) SendMsg(res *ClientMsg) error {
+	var buf []byte
+	buf, err := c.decode(res.Tag, res.Msg)
+	if err != nil {
+		errStr := fmt.Sprintf("client msg is err:%v\n", err)
+		return fmt.Errorf(errStr)
+	}
+
+	c.sendQueue <- buf
+	return nil
+}
+
 // 解析消息
 func (c *ClientConn_tcp) ReadRecvMsg(session ClientSession) {
 	for {
 		var err error
 		var packet *ClientMsg
-		packet, err = c.ReadBytesClientMsg()
+		packet, err = c.uncode()
 		if err != nil {
 			fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)
 			c.conn.Close()
@@ -109,7 +122,7 @@ func (c *ClientConn_tcp) DeliverRecvMsg(session ClientSession) {
 			}
 
 			var buf []byte
-			buf, err = c.WriteBytesClientMsg(res.Tag, res.Msg)
+			buf, err = c.decode(res.Tag, res.Msg)
 			if err != nil {
 				fmt.Printf("client msg is err:%v\n", err)
 				continue

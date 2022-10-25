@@ -11,6 +11,7 @@ type ClientConn interface {
 	GetConnType() ClientConn_Enum
 	GetIP() string
 	GetConn() interface{}
+	SendMsg(*ClientMsg) error
 }
 
 type ClientSession interface {
