@@ -12,13 +12,13 @@ type Tcp struct {
 	Protocol string
 	Listener net.Listener
 
-	Session clientConn.ClientSession
+	NewSessionFunc func(clientConn.ClientConn) clientConn.ClientSession
 }
 
-func (t *Tcp) SetAddr(addr, protocol string, session clientConn.ClientSession) {
+func (t *Tcp) SetAddr(addr, protocol string, newSessionFunc func(clientConn.ClientConn) clientConn.ClientSession) {
 	t.Addr = addr
 	t.Protocol = protocol
-	t.Session = session
+	t.NewSessionFunc = newSessionFunc
 }
 
 func (t *Tcp) Listen() error {
@@ -35,9 +35,10 @@ func (t *Tcp) Listen() error {
 			fmt.Printf("client[%v] accept is err[%v]\n", conn.RemoteAddr().String(), err)
 			continue
 		}
-		clientConn := clientConn.NewClientConn(conn, t.Session)
-		go clientConn.ReadRecvMsg()
-		go clientConn.DeliverRecvMsg()
+		clientConn := clientConn.NewClientConn(conn)
+		session := t.NewSessionFunc(clientConn)
+		go clientConn.ReadRecvMsg(session)
+		go clientConn.DeliverRecvMsg(session)
 		go clientConn.WriteMsg()
 	}
 	return nil

@@ -21,13 +21,13 @@ type Http struct {
 	GinEngine *gin.Engine
 	Conn      net.Conn
 
-	Session clientConn.ClientSession
+	NewSessionFunc func(clientConn.ClientConn) clientConn.ClientSession
 }
 
-func (h *Http) SetAddr(addr, protocol string, session clientConn.ClientSession) {
+func (h *Http) SetAddr(addr, protocol string, newSessionFunc func(clientConn.ClientConn) clientConn.ClientSession) {
 	h.Addr = addr
 	h.Protocol = protocol
-	h.Session = session
+	h.NewSessionFunc = newSessionFunc
 	h.GinEngine = gin.New()
 }
 
@@ -37,10 +37,11 @@ func (h *Http) wsHandler(c *gin.Context) {
 		http.NotFound(c.Writer, c.Request)
 		return
 	}
-	clientConn := clientConn.NewClientConn_http(conn, h.Session)
-	go clientConn.ReadRecvMsg_http()
-	go clientConn.DeliverRecvMsg_http()
-	go clientConn.WriteMsg_http()
+	clientConn := clientConn.NewClientConn_http(conn)
+	session := h.NewSessionFunc(clientConn)
+	go clientConn.ReadRecvMsg_http(session)
+	go clientConn.DeliverRecvMsg_http(session)
+	go clientConn.WriteMsg_http(session)
 }
 
 func (h *Http) Listen() error {

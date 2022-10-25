@@ -8,39 +8,37 @@ import (
 	"net"
 )
 
-type ClientSession interface {
-	ConnectCallBack()                                            // 客户端连接回调
-	RequestCallBack(*ClientMsg, interface{}) (*ClientMsg, error) // 消息处理的回调, 把conn连接也传入进去
-	DisConnectCallBack()                                         // 客户端断开连接回调
-}
-
-// type CallBackFunc func(*ClientMsg) (*ClientMsg, error)
-
 type ClientMsg struct {
 	Tag int
 	Msg []byte
 }
 
-type ClientConn struct {
+type ClientConn_tcp struct {
 	conn      net.Conn
 	inStream  *bufio.Reader
-	session   ClientSession
 	recvQueue chan *ClientMsg // 接收队列
 	sendQueue chan []byte     // 发送队列
 }
 
-func NewClientConn(conn net.Conn, session ClientSession) *ClientConn {
-	return &ClientConn{
+func NewClientConn(conn net.Conn) *ClientConn_tcp {
+	return &ClientConn_tcp{
 		conn:      conn,
 		inStream:  bufio.NewReader(conn),
-		session:   session,
 		recvQueue: make(chan *ClientMsg),
 		sendQueue: make(chan []byte),
 	}
 }
 
+func (c *ClientConn_tcp) GetIP() string {
+	return c.conn.LocalAddr().String()
+}
+
+func (c *ClientConn_tcp) GetConn() interface{} {
+	return c.conn
+}
+
 // 字节流
-func (c *ClientConn) ReadBytesClientMsg() (*ClientMsg, error) {
+func (c *ClientConn_tcp) ReadBytesClientMsg() (*ClientMsg, error) {
 
 	head := make([]byte, 8)
 	//ID和长度
@@ -63,7 +61,7 @@ func (c *ClientConn) ReadBytesClientMsg() (*ClientMsg, error) {
 	}, nil
 }
 
-func (c *ClientConn) WriteBytesClientMsg(tag int, msg []byte) ([]byte, error) {
+func (c *ClientConn_tcp) WriteBytesClientMsg(tag int, msg []byte) ([]byte, error) {
 	// 将消息封装起来(id + 长度 + 消息)
 	buf := make([]byte, 0, 8+len(msg))
 	binary.BigEndian.PutUint32(buf[:4], uint32(tag))      // id占4个字节
@@ -73,7 +71,7 @@ func (c *ClientConn) WriteBytesClientMsg(tag int, msg []byte) ([]byte, error) {
 }
 
 // 解析消息
-func (c *ClientConn) ReadRecvMsg() {
+func (c *ClientConn_tcp) ReadRecvMsg(session ClientSession) {
 	for {
 		var err error
 		var packet *ClientMsg
@@ -81,7 +79,7 @@ func (c *ClientConn) ReadRecvMsg() {
 		if err != nil {
 			fmt.Printf("client[%v] read msg is err:%v\n", c.conn, err)
 			c.conn.Close()
-			c.session.DisConnectCallBack()
+			session.DisConnectCallBack()
 			break
 		}
 
@@ -91,7 +89,7 @@ func (c *ClientConn) ReadRecvMsg() {
 }
 
 // 处理消息
-func (c *ClientConn) DeliverRecvMsg() {
+func (c *ClientConn_tcp) DeliverRecvMsg(session ClientSession) {
 	for {
 		select {
 		case msg, ok := <-c.recvQueue:
@@ -100,7 +98,7 @@ func (c *ClientConn) DeliverRecvMsg() {
 			}
 
 			// 调用回调函数
-			res, err := c.session.RequestCallBack(msg, c.conn)
+			res, err := session.RequestCallBack(msg)
 			if err != nil {
 				fmt.Printf("client msg is err:%v\n", err)
 				continue
@@ -119,7 +117,7 @@ func (c *ClientConn) DeliverRecvMsg() {
 }
 
 // 把消息发送给客户端
-func (c *ClientConn) WriteMsg() {
+func (c *ClientConn_tcp) WriteMsg() {
 	for {
 		select {
 		case sendMsg, ok := <-c.sendQueue:

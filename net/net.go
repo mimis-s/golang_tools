@@ -16,9 +16,9 @@ func init() {
 	// mapProtol["udp"] = new(udp.Udp)
 }
 
-func InitServer(addr string, sProtocol string, plulgInterface clientConn.ClientSession) service.Service {
+func InitServer(addr string, sProtocol string, plulgFunc func(clientConn.ClientConn) clientConn.ClientSession) service.Service {
 
 	s := mapProtol[sProtocol]
-	s.SetAddr(addr, sProtocol, plulgInterface)
+	s.SetAddr(addr, sProtocol, plulgFunc)
 	return s
 }

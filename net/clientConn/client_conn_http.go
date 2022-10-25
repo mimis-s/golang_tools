@@ -10,18 +10,24 @@ import (
 
 type ClientConn_http struct {
 	conn      *websocket.Conn
-	session   ClientSession
 	recvQueue chan *ClientMsg // 接收队列
 	sendQueue chan []byte     // 发送队列
 }
 
-func NewClientConn_http(conn *websocket.Conn, session ClientSession) *ClientConn_http {
+func NewClientConn_http(conn *websocket.Conn) *ClientConn_http {
 	return &ClientConn_http{
 		conn:      conn,
-		session:   session,
 		recvQueue: make(chan *ClientMsg),
 		sendQueue: make(chan []byte),
 	}
+}
+
+func (c *ClientConn_http) GetIP() string {
+	return c.conn.LocalAddr().String()
+}
+
+func (c *ClientConn_http) GetConn() interface{} {
+	return c.conn
 }
 
 // json
@@ -30,7 +36,6 @@ func (c *ClientConn_http) ReadJsonClientMsg() (*ClientMsg, error) {
 	if err != nil {
 		errStr := fmt.Sprintf("read message is err:%v", err)
 		fmt.Println(errStr)
-		c.session.DisConnectCallBack()
 		// 服务器主动断开
 		c.conn.Close()
 
@@ -91,9 +96,9 @@ func (c *ClientConn_http) WriteJsonClientMsg(tag int, msg []byte) ([]byte, error
 }
 
 // 解析消息
-func (c *ClientConn_http) ReadRecvMsg_http() {
+func (c *ClientConn_http) ReadRecvMsg_http(session ClientSession) {
 	defer func() {
-		c.session.DisConnectCallBack()
+		session.DisConnectCallBack()
 		c.conn.Close()
 	}()
 	for {
@@ -113,9 +118,9 @@ func (c *ClientConn_http) ReadRecvMsg_http() {
 }
 
 // 处理消息
-func (c *ClientConn_http) DeliverRecvMsg_http() {
+func (c *ClientConn_http) DeliverRecvMsg_http(session ClientSession) {
 	defer func() {
-		c.session.DisConnectCallBack()
+		session.DisConnectCallBack()
 		c.conn.Close()
 	}()
 	for {
@@ -126,7 +131,7 @@ func (c *ClientConn_http) DeliverRecvMsg_http() {
 			}
 
 			// 调用回调函数
-			res, err := c.session.RequestCallBack(msg, c.conn)
+			res, err := session.RequestCallBack(msg)
 			if err != nil {
 				fmt.Printf("client msg is err:%v\n", err)
 				continue
@@ -145,9 +150,9 @@ func (c *ClientConn_http) DeliverRecvMsg_http() {
 }
 
 // 把消息发送给客户端
-func (c *ClientConn_http) WriteMsg_http() {
+func (c *ClientConn_http) WriteMsg_http(session ClientSession) {
 	defer func() {
-		c.session.DisConnectCallBack()
+		session.DisConnectCallBack()
 		c.conn.Close()
 	}()
 	for {
