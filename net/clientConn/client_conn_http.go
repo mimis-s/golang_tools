@@ -22,6 +22,10 @@ func NewClientConn_http(conn *websocket.Conn) *ClientConn_http {
 	}
 }
 
+func (c *ClientConn_http) GetConnType() ClientConn_Enum {
+	return ClientConn_HTTP_Enum
+}
+
 func (c *ClientConn_http) GetIP() string {
 	return c.conn.LocalAddr().String()
 }

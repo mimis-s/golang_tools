@@ -29,6 +29,10 @@ func NewClientConn(conn net.Conn) *ClientConn_tcp {
 	}
 }
 
+func (c *ClientConn_tcp) GetConnType() ClientConn_Enum {
+	return ClientConn_TCP_Enum
+}
+
 func (c *ClientConn_tcp) GetIP() string {
 	return c.conn.LocalAddr().String()
 }

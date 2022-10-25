@@ -1,6 +1,14 @@
 package clientConn
 
+type ClientConn_Enum int
+
+const (
+	ClientConn_HTTP_Enum ClientConn_Enum = 1
+	ClientConn_TCP_Enum  ClientConn_Enum = 2
+)
+
 type ClientConn interface {
+	GetConnType() ClientConn_Enum
 	GetIP() string
 	GetConn() interface{}
 }
