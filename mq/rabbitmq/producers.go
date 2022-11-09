@@ -12,10 +12,11 @@ type producers struct {
 	channel      *amqp.Channel
 	exchangeName string
 	routingKey   string
+	persistent   uint8 // 可持久化(和durable一样, 不过这个值是uint8的)
 }
 
 // 初始化生产者,连接mq服务器
-func InitProducers(url, exchangeName, routingKey string) (*producers, error) {
+func InitProducers(url, exchangeName, routingKey string, durable bool) (*producers, error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return nil, fmt.Errorf("连接mq错误:%v", err)
@@ -29,7 +30,7 @@ func InitProducers(url, exchangeName, routingKey string) (*producers, error) {
 	err = ch.ExchangeDeclare(
 		exchangeName, // name
 		"topic",      // type
-		true,         // durable
+		durable,      // durable
 		false,        // auto-deleted
 		false,        // internal
 		false,        // no-wait
@@ -39,7 +40,14 @@ func InitProducers(url, exchangeName, routingKey string) (*producers, error) {
 		return nil, fmt.Errorf("定义exchange错误:%v", err)
 	}
 
-	return &producers{ch, exchangeName, routingKey}, nil
+	persistent := uint8(0)
+	if durable {
+		persistent = amqp.Persistent
+	} else {
+		persistent = amqp.Transient
+	}
+
+	return &producers{ch, exchangeName, routingKey, persistent}, nil
 }
 
 // 发送消息

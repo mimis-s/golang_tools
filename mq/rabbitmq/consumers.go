@@ -20,7 +20,8 @@ type ConsumersQueue struct {
 	CallBack     func(payload interface{}) error
 }
 
-func RegisterConsumers(url string, cQueue []*ConsumersQueue) error {
+// durable可持久化
+func RegisterConsumers(url string, durable bool, cQueue []*ConsumersQueue) error {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return fmt.Errorf("连接mq错误:%v", err)
@@ -36,7 +37,7 @@ func RegisterConsumers(url string, cQueue []*ConsumersQueue) error {
 		err = ch.ExchangeDeclare(
 			c.ExchangeName, // name
 			"topic",        // type
-			true,           // durable
+			durable,        // durable
 			false,          // auto-deleted
 			false,          // internal
 			false,          // no-wait
@@ -48,12 +49,12 @@ func RegisterConsumers(url string, cQueue []*ConsumersQueue) error {
 
 		// 消费者队列
 		q, err := ch.QueueDeclare(
-			"",    // name
-			false, // durable
-			false, // delete when usused
-			true,  // exclusive
-			false, // no-wait
-			nil,   // arguments
+			"",      // name
+			durable, // durable
+			false,   // delete when usused
+			true,    // exclusive
+			false,   // no-wait
+			nil,     // arguments
 		)
 		if err != nil {
 			return fmt.Errorf("定义queue错误:%v", err)
