@@ -3,8 +3,8 @@ package rabbitmq
 import (
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/streadway/amqp"
+	"google.golang.org/protobuf/proto"
 )
 
 // 生产者
