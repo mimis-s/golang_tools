@@ -84,6 +84,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/smallnest/quick v0.0.0-20220703133648-f13409fa6c67 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
+	github.com/streadway/amqp v1.0.0 // indirect
 	github.com/templexxx/cpufeat v0.0.0-20180724012125-cef66df7f161 // indirect
 	github.com/templexxx/xor v0.0.0-20191217153810-f85b25db303b // indirect
 	github.com/tinylib/msgp v1.1.6 // indirect

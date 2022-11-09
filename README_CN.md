@@ -5,7 +5,7 @@
 
 #### 安装教程
 
-go get github.com/mimis-s/golang_tools
+go get https://github.com/mimis-s/golang_tools
 
 #### 使用说明
 
@@ -17,3 +17,5 @@ go get github.com/mimis-s/golang_tools
     详细使用可参考protobuf插件集成rpcx: https://github.com/mimis-s/protoc-gen-rpcx
 
 3.  dfs封装了s3,cloud storage, minio三个分布式文件存储系统的集成api
+
+4.  rabbitmq使用topic主题交换机, 支持同时给多个消费者, 有选择性的分发消息
