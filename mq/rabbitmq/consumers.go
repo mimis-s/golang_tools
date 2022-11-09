@@ -67,7 +67,7 @@ func InitConsumers(url, exchangeName, routingKey string) (*consumers, error) {
 
 func (c *consumers) RegisterConsume(callBack func(payload interface{}) error) error {
 
-	errChannel := make(chan error)
+	errChannel := make(chan *amqp.Error)
 
 	msgs, err := c.channel.Consume(
 		c.queueName,
@@ -81,25 +81,24 @@ func (c *consumers) RegisterConsume(callBack func(payload interface{}) error) er
 	if err != nil {
 		return fmt.Errorf("接收mq消息错误:%v", err)
 	}
+	c.channel.NotifyClose(errChannel)
 
 	go func() {
 		for d := range msgs {
 			var pb proto.Message
 			err := proto.Unmarshal(d.Body, pb)
 			if err != nil {
-				errChannel <- err
-				return
+				fmt.Printf("proto Unmarshal[%v] is err[%v]", d.Body, err)
 			}
 			err = callBack(pb)
 			if err != nil {
-				errChannel <- err
-				return
+				fmt.Printf("mq callback msg[%v] is err[%v]", pb, err)
 			}
 		}
 	}()
 	select {
-	case err = <-errChannel:
-		return err
+	case mqErr := <-errChannel:
+		return mqErr
 	}
 
 }
