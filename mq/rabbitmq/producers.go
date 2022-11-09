@@ -62,7 +62,7 @@ func (p *producers) Publish(payload interface{}) error {
 		false,
 		false,
 		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
+			DeliveryMode: p.persistent,
 			ContentType:  "text/plain",
 			Body:         msg,
 		},
