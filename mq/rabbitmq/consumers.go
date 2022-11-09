@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/streadway/amqp"
@@ -99,13 +100,13 @@ func consume(ch *amqp.Channel, queueName string, callBack func(payload interface
 	go func() {
 		for d := range msgs {
 			var pb proto.Message
-			err := proto.Unmarshal(d.Body, pb)
+			err := json.Unmarshal(d.Body, pb)
 			if err != nil {
 				fmt.Printf("proto Unmarshal[%v] is err[%v]", d.Body, err)
 			}
 			err = callBack(pb)
 			if err != nil {
-				fmt.Printf("mq callback msg[%v] is err[%v]", pb, err)
+				fmt.Printf("mq callback msg[%v] is err[%v]", d.Body, err)
 			}
 		}
 	}()
