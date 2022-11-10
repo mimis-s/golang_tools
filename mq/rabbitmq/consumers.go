@@ -14,10 +14,14 @@ type consumers struct {
 	queueName string
 }
 
+type EventStruct struct {
+	RoutingKey    string      // 路由key
+	PayLoadStruct interface{} // 要解析的结构体
+}
+
 // 消费者队列
 type ConsumersQueue struct {
-	RoutingKey    string                          // 路由key
-	PayLoadStruct interface{}                     // 要解析的结构体
+	ConsumerEvent *EventStruct
 	CallBack      func(payload interface{}) error // 回调函数
 }
 
@@ -64,7 +68,7 @@ func RegisterConsumers(url string, durable bool, exchangeName string, cQueue []*
 		// 绑定队列到exchange，通过routing路由到消费者
 		err = ch.QueueBind(
 			q.Name,
-			c.RoutingKey,
+			c.ConsumerEvent.RoutingKey,
 			exchangeName,
 			false,
 			nil,
@@ -99,7 +103,7 @@ func consume(ch *amqp.Channel, queueName string, c *ConsumersQueue) error {
 
 	go func() {
 		for d := range msgs {
-			s := reflect.TypeOf(c.PayLoadStruct)
+			s := reflect.TypeOf(c.ConsumerEvent.PayLoadStruct)
 			data := reflect.New(s)
 
 			err := json.Unmarshal(d.Body, data.Interface())

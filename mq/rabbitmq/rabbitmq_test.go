@@ -32,9 +32,11 @@ func testProducers(url string, exchangeName string, routingKey string, durable b
 func testConsume(url string, exchangeName string, routingKey string, durable bool) {
 	cQueue := make([]*ConsumersQueue, 0)
 	cQueue = append(cQueue, &ConsumersQueue{
-		RoutingKey:    routingKey,
-		PayLoadStruct: TestStruct{},
-		CallBack:      callBack,
+		ConsumerEvent: &EventStruct{
+			RoutingKey:    routingKey,
+			PayLoadStruct: TestStruct{},
+		},
+		CallBack: callBack,
 	})
 
 	RegisterConsumers(url, durable, exchangeName, cQueue)
