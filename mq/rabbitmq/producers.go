@@ -8,7 +8,7 @@ import (
 )
 
 // 生产者
-type producers struct {
+type Producers struct {
 	channel      *amqp.Channel
 	exchangeName string
 	routingKey   string
@@ -16,7 +16,7 @@ type producers struct {
 }
 
 // 初始化生产者,连接mq服务器
-func InitProducers(url, exchangeName, routingKey string, durable bool) (*producers, error) {
+func InitProducers(url, exchangeName, routingKey string, durable bool) (*Producers, error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return nil, fmt.Errorf("连接mq错误:%v", err)
@@ -47,11 +47,11 @@ func InitProducers(url, exchangeName, routingKey string, durable bool) (*produce
 		persistent = amqp.Transient
 	}
 
-	return &producers{ch, exchangeName, routingKey, persistent}, nil
+	return &Producers{ch, exchangeName, routingKey, persistent}, nil
 }
 
 // 发送消息
-func (p *producers) Publish(payload interface{}) error {
+func (p *Producers) Publish(payload interface{}) error {
 	msg, err := json.Marshal(payload)
 	if err != nil {
 		return err
