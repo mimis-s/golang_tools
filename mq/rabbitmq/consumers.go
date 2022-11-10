@@ -17,7 +17,7 @@ type consumers struct {
 // 消费者队列
 type ConsumersQueue struct {
 	RoutingKey    string                          // 路由key
-	payLoadStruct interface{}                     // 要解析的结构体
+	PayLoadStruct interface{}                     // 要解析的结构体
 	CallBack      func(payload interface{}) error // 回调函数
 }
 
@@ -99,7 +99,7 @@ func consume(ch *amqp.Channel, queueName string, c *ConsumersQueue) error {
 
 	go func() {
 		for d := range msgs {
-			s := reflect.TypeOf(c.payLoadStruct)
+			s := reflect.TypeOf(c.PayLoadStruct)
 			data := reflect.New(s)
 
 			err := json.Unmarshal(d.Body, data.Interface())
