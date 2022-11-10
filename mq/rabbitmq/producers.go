@@ -1,10 +1,10 @@
 package rabbitmq
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/streadway/amqp"
-	"google.golang.org/protobuf/proto"
 )
 
 // 生产者
@@ -52,7 +52,7 @@ func InitProducers(url, exchangeName, routingKey string, durable bool) (*produce
 
 // 发送消息
 func (p *producers) Publish(payload interface{}) error {
-	msg, err := proto.Marshal(payload.(proto.Message))
+	msg, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}

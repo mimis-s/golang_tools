@@ -3,9 +3,9 @@ package rabbitmq
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/streadway/amqp"
-	"google.golang.org/protobuf/proto"
 )
 
 // 消费者
@@ -16,13 +16,13 @@ type consumers struct {
 
 // 消费者队列
 type ConsumersQueue struct {
-	ExchangeName string
-	RoutingKey   string
-	CallBack     func(payload interface{}) error
+	RoutingKey    string                          // 路由key
+	payLoadStruct interface{}                     // 要解析的结构体
+	CallBack      func(payload interface{}) error // 回调函数
 }
 
 // durable可持久化
-func RegisterConsumers(url string, durable bool, cQueue []*ConsumersQueue) error {
+func RegisterConsumers(url string, durable bool, exchangeName string, cQueue []*ConsumersQueue) error {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return fmt.Errorf("连接mq错误:%v", err)
@@ -36,13 +36,13 @@ func RegisterConsumers(url string, durable bool, cQueue []*ConsumersQueue) error
 		}
 
 		err = ch.ExchangeDeclare(
-			c.ExchangeName, // name
-			"topic",        // type
-			durable,        // durable
-			false,          // auto-deleted
-			false,          // internal
-			false,          // no-wait
-			nil,            // arguments
+			exchangeName, // name
+			"topic",      // type
+			durable,      // durable
+			false,        // auto-deleted
+			false,        // internal
+			false,        // no-wait
+			nil,          // arguments
 		)
 		if err != nil {
 			return fmt.Errorf("定义exchange错误:%v", err)
@@ -65,21 +65,21 @@ func RegisterConsumers(url string, durable bool, cQueue []*ConsumersQueue) error
 		err = ch.QueueBind(
 			q.Name,
 			c.RoutingKey,
-			c.ExchangeName,
+			exchangeName,
 			false,
 			nil,
 		)
 		if err != nil {
-			return fmt.Errorf("queue[%v]绑定exchange[%v]错误:%v", q.Name, c.ExchangeName, err)
+			return fmt.Errorf("queue[%v]绑定exchange[%v]错误:%v", q.Name, exchangeName, err)
 		}
 
-		go consume(ch, q.Name, c.CallBack)
+		go consume(ch, q.Name, c)
 	}
 
 	return nil
 }
 
-func consume(ch *amqp.Channel, queueName string, callBack func(payload interface{}) error) error {
+func consume(ch *amqp.Channel, queueName string, c *ConsumersQueue) error {
 
 	errChannel := make(chan *amqp.Error)
 
@@ -99,12 +99,14 @@ func consume(ch *amqp.Channel, queueName string, callBack func(payload interface
 
 	go func() {
 		for d := range msgs {
-			var pb proto.Message
-			err := json.Unmarshal(d.Body, pb)
+			s := reflect.TypeOf(c.payLoadStruct)
+			data := reflect.New(s)
+
+			err := json.Unmarshal(d.Body, data.Interface())
 			if err != nil {
-				fmt.Printf("proto Unmarshal[%v] is err[%v]", d.Body, err)
+				fmt.Printf("json Unmarshal[%v] is err[%v]", d.Body, err)
 			}
-			err = callBack(pb)
+			err = c.CallBack(data.Interface())
 			if err != nil {
 				fmt.Printf("mq callback msg[%v] is err[%v]", d.Body, err)
 			}

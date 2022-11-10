@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+type TestStruct struct {
+	NickName string
+}
+
 // 生产者
 func testProducers(url string, exchangeName string, routingKey string, durable bool) {
 	p, err := InitProducers(url, exchangeName, routingKey, durable)
@@ -13,10 +17,8 @@ func testProducers(url string, exchangeName string, routingKey string, durable b
 		return
 	}
 
-	// 这里不想写proto文件, 所以简化为json结构
-	// 外部调用只能使用proto结构
-	data := map[string]string{
-		"NickName": "123",
+	data := &TestStruct{
+		"123",
 	}
 
 	err = p.Publish(data)
@@ -30,12 +32,12 @@ func testProducers(url string, exchangeName string, routingKey string, durable b
 func testConsume(url string, exchangeName string, routingKey string, durable bool) {
 	cQueue := make([]*ConsumersQueue, 0)
 	cQueue = append(cQueue, &ConsumersQueue{
-		ExchangeName: exchangeName,
-		RoutingKey:   routingKey,
-		CallBack:     callBack,
+		RoutingKey:    routingKey,
+		payLoadStruct: &TestStruct{},
+		CallBack:      callBack,
 	})
 
-	RegisterConsumers(url, durable, cQueue)
+	RegisterConsumers(url, durable, exchangeName, cQueue)
 }
 
 func TestRabbitMQ(t *testing.T) {
