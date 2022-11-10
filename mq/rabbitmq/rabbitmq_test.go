@@ -33,7 +33,7 @@ func testConsume(url string, exchangeName string, routingKey string, durable boo
 	cQueue := make([]*ConsumersQueue, 0)
 	cQueue = append(cQueue, &ConsumersQueue{
 		RoutingKey:    routingKey,
-		payLoadStruct: &TestStruct{},
+		PayLoadStruct: TestStruct{},
 		CallBack:      callBack,
 	})
 
