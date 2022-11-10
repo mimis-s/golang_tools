@@ -11,7 +11,7 @@ type TestStruct struct {
 
 // 生产者
 func testProducers(url string, exchangeName string, routingKey string, durable bool) {
-	p, err := InitProducers(url, exchangeName, routingKey, durable)
+	p, err := InitProducers(url, exchangeName, durable)
 	if err != nil {
 		fmt.Printf("err:%v", err)
 		return
@@ -21,7 +21,7 @@ func testProducers(url string, exchangeName string, routingKey string, durable b
 		"123",
 	}
 
-	err = p.Publish(data)
+	err = p.Publish(routingKey, data)
 	if err != nil {
 		fmt.Printf("err:%v", err)
 		return
