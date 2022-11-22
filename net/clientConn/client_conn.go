@@ -67,7 +67,7 @@ func (c *ClientConn_tcp) uncode() (*ClientMsg, error) {
 
 func (c *ClientConn_tcp) decode(tag int, msg []byte) ([]byte, error) {
 	// 将消息封装起来(id + 长度 + 消息)
-	buf := make([]byte, 0, 8+len(msg))
+	buf := make([]byte, 8)
 	binary.BigEndian.PutUint32(buf[:4], uint32(tag))      // id占4个字节
 	binary.BigEndian.PutUint32(buf[4:], uint32(len(msg))) // 长度占4个字节
 	buf = append(buf, msg...)
