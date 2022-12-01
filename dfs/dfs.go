@@ -22,12 +22,12 @@ type Config struct {
 	Bucket     string  `yaml:"bucket"`
 	ExpireDays int     `yaml:"expire_days"` // 桶数据过期时间
 
-	// minio,s3参数
+	// minio,s3参数(这些参数在CloudStorage里面都集成在了base64json里面)
 	Url   string `yaml:"url"`
-	KeyID string `yaml:"key_id"`
-	Key   string `yaml:"key"`
+	KeyID string `yaml:"key_id"` // 用户ID
+	Key   string `yaml:"key"`    // 密码
 
-	// CloudStorage参数
+	// CloudStorage参数,从谷歌云服务里面拿到的账户信息存储为base64格式
 	Base64Json string `yaml:"base64_json"`
 }
 
