@@ -17,37 +17,34 @@ var (
 )
 
 type Config struct {
-	Type         DFSType             `yaml:"type"` // s3/minio/cloud_storage
-	Enable       bool                `yaml:"enable"`
-	Bucket       string              `yaml:"bucket"`
-	ExpireDays   int                 `yaml:"expire_days"` // 桶数据过期时间
-	S3           *S3Config           `yaml:"s3"`
-	Minio        *MinioConfig        `yaml:"minio"`
-	CloudStorage *CloudStorageConfig `yaml:"cloud_storage"`
+	Type       DFSType `yaml:"type"` // s3/minio/cloud_storage
+	Enable     bool    `yaml:"enable"`
+	Bucket     string  `yaml:"bucket"`
+	ExpireDays int     `yaml:"expire_days"` // 桶数据过期时间
+
+	// minio,s3参数
+	Url   string `yaml:"url"`
+	KeyID string `yaml:"key_id"`
+	Key   string `yaml:"key"`
+
+	// CloudStorage参数
+	Base64Json string `yaml:"base64_json"`
+}
+
+var mapHandler = map[string]func(config *Config) (DFSHandler, error){
+	DFSType_Minio:       newMinioHandler,
+	DFSType_S3:          newS3Handler,
+	DFSType_CloudStorge: newCloudStorageHandler,
 }
 
 func NewDFSHandler(config *Config) (DFSHandler, error) {
 	if !config.Enable {
 		return nil, fmt.Errorf("config set diable dfs but now invoke new")
 	}
-	switch config.Type {
-	case DFSType_Minio:
-		if config.Minio != nil {
-			return newMinioHandler(config.Bucket, config.ExpireDays, config.Minio)
-		} else {
-			return nil, fmt.Errorf("not found invalid config for minio")
-		}
-	case DFSType_S3:
-		if config.S3 != nil {
-			return newS3Handler(config.Bucket, config.ExpireDays, config.S3)
-		} else {
-			return nil, fmt.Errorf("not found invalid config for s3")
-		}
-	case DFSType_CloudStorge:
-		if config.CloudStorage != nil {
-			return newCloudStorageHandler(config.Bucket, config.ExpireDays, config.CloudStorage)
-		}
-		return nil, fmt.Errorf("not found invalid config for cloud storage")
+	dfsFun, ok := mapHandler[config.Type]
+	if ok {
+		return dfsFun(config)
+	} else {
+		return nil, fmt.Errorf("invalid dfs type:%v", config.Type)
 	}
-	return nil, fmt.Errorf("invalid dfs type:%v", config.Type)
 }

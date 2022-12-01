@@ -12,22 +12,15 @@ import (
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
-type MinioConfig struct {
-	Url    string `yaml:"url"`
-	Bucket string `yaml:"bucket"`
-	KeyID  string `yaml:"key_id"`
-	Key    string `yaml:"key"`
-}
-
 type minioHandler struct {
 	bucket      string
 	expireDays  int
-	config      *MinioConfig
+	config      *Config
 	minioClient *minio.Client
 	once        *sync.Once
 }
 
-func newMinioHandler(bucket string, expireDays int, config *MinioConfig) (DFSHandler, error) {
+func newMinioHandler(config *Config) (DFSHandler, error) {
 	minioClient, err := minio.New(config.Url, &minio.Options{
 		Creds:  credentials.NewStaticV4(config.KeyID, config.Key, ""),
 		Secure: false,
@@ -37,7 +30,7 @@ func newMinioHandler(bucket string, expireDays int, config *MinioConfig) (DFSHan
 		return nil, err
 	}
 
-	handler := &minioHandler{bucket: bucket, expireDays: expireDays, config: config, minioClient: minioClient, once: new(sync.Once)}
+	handler := &minioHandler{bucket: config.Bucket, expireDays: config.ExpireDays, config: config, minioClient: minioClient, once: new(sync.Once)}
 	handler.minioClient = minioClient
 	return handler, nil
 }

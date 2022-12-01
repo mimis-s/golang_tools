@@ -6,20 +6,15 @@ import (
 )
 
 func TestDFS(t *testing.T) {
-
-	data := &Config{
-		Type:         DFSType_CloudStorge,
-		Enable:       true,
-		Bucket:       "nox_football_id",
-		ExpireDays:   1,
-		CloudStorage: &CloudStorageConfig{},
-	}
-
 	// 测试谷歌云(这个是谷歌云下载的key文件的base64编码字符串)
 	testTxt := "******"
 
-	data.CloudStorage = &CloudStorageConfig{
-		testTxt,
+	data := &Config{
+		Type:       DFSType_CloudStorge,
+		Enable:     true,
+		Bucket:     "nox_football_id",
+		ExpireDays: 1,
+		Base64Json: testTxt,
 	}
 
 	handler, err := NewDFSHandler(data)

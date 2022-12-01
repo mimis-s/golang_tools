@@ -11,29 +11,15 @@ import (
 	"google.golang.org/api/option"
 )
 
-type CloudStorageConfig struct {
-	Base64Json string `yaml:"base64_json"`
-	// Type                    string `yaml:"type" json:"type"`
-	// ProjectId               string `yaml:"project_id" json:"project_id"`
-	// Private_key_id          string `yaml:"private_key_id" json:"private_key_id"`
-	// Private_key             string `yaml:"private_key" json:"private_key"`
-	// ClientEmail             string `yaml:"client_email" json:"client_email"`
-	// ClientID                string `yaml:"client_id" json:"client_id"`
-	// AuthUri                 string `yaml:"auth_uri" json:"auth_uri"`
-	// TokenUri                string `yaml:"token_uri" json:"token_uri"`
-	// AuthProviderX509CertUrl string `yaml:"auth_provider_x509_cert_url" json:"auth_provider_x509_cert_url"`
-	// ClientX509CertUrl       string `yaml:"client_x509_cert_url" json:"client_x509_cert_url"`
-}
-
 type cloudStorageHandler struct {
 	bucket            string
 	expireDays        int
-	config            *CloudStorageConfig
+	config            *Config
 	cloudStorgeClient *storage.Client
 	once              *sync.Once
 }
 
-func newCloudStorageHandler(bucket string, expireDays int, config *CloudStorageConfig) (DFSHandler, error) {
+func newCloudStorageHandler(config *Config) (DFSHandler, error) {
 	ctx := context.Background()
 
 	str, err := base64.StdEncoding.DecodeString(config.Base64Json)
@@ -51,8 +37,8 @@ func newCloudStorageHandler(bucket string, expireDays int, config *CloudStorageC
 	}
 
 	handler := &cloudStorageHandler{
-		bucket:            bucket,
-		expireDays:        expireDays,
+		bucket:            config.Bucket,
+		expireDays:        config.ExpireDays,
 		config:            config,
 		cloudStorgeClient: client,
 		once:              new(sync.Once),

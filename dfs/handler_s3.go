@@ -14,22 +14,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-type S3Config struct {
-	Url    string `yaml:"url"`
-	Bucket string `yaml:"bucket"`
-	KeyID  string `yaml:"key_id"`
-	Key    string `yaml:"key"`
-}
-
 type s3Handler struct {
 	bucket     string
 	expireDays int
-	config     *S3Config
+	config     *Config
 	s3Client   *s3.S3
 	once       *sync.Once
 }
 
-func newS3Handler(bucket string, expireDays int, config *S3Config) (DFSHandler, error) {
+func newS3Handler(config *Config) (DFSHandler, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Credentials:      credentials.NewStaticCredentials(config.KeyID, config.Key, ""),
 		Endpoint:         aws.String(config.Url),
@@ -42,8 +35,8 @@ func newS3Handler(bucket string, expireDays int, config *S3Config) (DFSHandler, 
 	}
 
 	handler := &s3Handler{
-		bucket:     bucket,
-		expireDays: expireDays,
+		bucket:     config.Bucket,
+		expireDays: config.ExpireDays,
 		config:     config,
 		s3Client:   s3.New(sess),
 		once:       new(sync.Once),
