@@ -67,7 +67,7 @@ func (p *Producers) Publish(routingKey string, payload interface{}) error {
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("mq send msg[%v] is err:%v", msg, err)
+		return fmt.Errorf("mq send msg[%v] is err:%v", string(msg), err)
 	}
 	return nil
 }

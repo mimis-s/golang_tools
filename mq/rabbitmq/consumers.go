@@ -108,11 +108,11 @@ func consume(ch *amqp.Channel, queueName string, c *ConsumersQueue) error {
 
 			err := json.Unmarshal(d.Body, data.Interface())
 			if err != nil {
-				fmt.Printf("json Unmarshal[%v] is err[%v]", d.Body, err)
+				fmt.Printf("json Unmarshal[%v] is err[%v]", string(d.Body), err)
 			}
 			err = c.CallBack(data.Interface())
 			if err != nil {
-				fmt.Printf("mq callback msg[%v] is err[%v]", d.Body, err)
+				fmt.Printf("mq callback msg[%v] is err[%v]", string(d.Body), err)
 			}
 		}
 	}()
