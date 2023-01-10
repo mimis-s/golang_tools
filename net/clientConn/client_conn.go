@@ -34,7 +34,7 @@ func (c *ClientConn_tcp) GetConnType() ClientConn_Enum {
 }
 
 func (c *ClientConn_tcp) GetIP() string {
-	return c.conn.LocalAddr().String()
+	return c.conn.RemoteAddr().String()
 }
 
 func (c *ClientConn_tcp) GetConn() interface{} {
