@@ -44,7 +44,10 @@ func (h *Http) wsHandler(c *gin.Context) {
 	go clientConn.WriteMsg_http(session)
 }
 
-func (h *Http) Listen() error {
+func (h *Http) Run() error {
 	h.GinEngine.GET("/ws", h.wsHandler)
 	return h.GinEngine.Run(h.Addr)
+}
+
+func (h *Http) Stop() {
 }

@@ -36,5 +36,5 @@ func (s *TcpSession) DisConnectCallBack() {
 
 func TestNet(t *testing.T) {
 	s := InitServer("localhost:8888", "tcp", NewTcpSession)
-	s.Listen()
+	s.Run()
 }

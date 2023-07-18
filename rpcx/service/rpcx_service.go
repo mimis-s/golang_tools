@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/rpcxio/rpcx-etcd/serverplugin"
@@ -13,10 +14,11 @@ var (
 
 type ServerManage struct {
 	Addr           string // 服务器暴露出来的地址
+	ListenAddr     string
 	ServiceHandler *server.Server
 }
 
-func New(addr string, etcdAddr []string, etcdBasePath string) (*ServerManage, error) {
+func New(addr string, etcdAddr []string, etcdBasePath string, listenAddr string) (*ServerManage, error) {
 	// 修改etcd默认路径
 	if etcdBasePath != "" {
 		basePath = etcdBasePath
@@ -35,6 +37,7 @@ func New(addr string, etcdAddr []string, etcdBasePath string) (*ServerManage, er
 	return &ServerManage{
 		Addr:           addr,
 		ServiceHandler: s,
+		ListenAddr:     listenAddr,
 	}, nil
 }
 
@@ -44,8 +47,14 @@ func (s *ServerManage) RegisterOneService(serverName string, handler interface{}
 }
 
 // 运行rpcx
-func (s *ServerManage) Run(listenAddr string) error {
-	return s.ServiceHandler.Serve("tcp", listenAddr)
+func (s *ServerManage) Run() error {
+	return s.ServiceHandler.Serve("tcp", s.ListenAddr)
+}
+
+func (s *ServerManage) Stop() {
+	ctx, f := context.WithTimeout(context.Background(), time.Second*5)
+	defer f()
+	s.ServiceHandler.Shutdown(ctx)
 }
 
 func RegisterPlugin(s *server.Server, addr string, etcdAddr []string) error {

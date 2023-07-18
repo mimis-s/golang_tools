@@ -21,7 +21,7 @@ func (t *Tcp) SetAddr(addr, protocol string, newSessionFunc func(clientConn.Clie
 	t.NewSessionFunc = newSessionFunc
 }
 
-func (t *Tcp) Listen() error {
+func (t *Tcp) Run() error {
 	var err error
 	t.Listener, err = net.Listen(t.Protocol, t.Addr)
 	if err != nil {
@@ -42,4 +42,7 @@ func (t *Tcp) Listen() error {
 		go clientConn.WriteMsg()
 	}
 	return nil
+}
+func (t *Tcp) Stop() {
+	t.Listener.Close()
 }
