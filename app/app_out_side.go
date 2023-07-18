@@ -26,13 +26,3 @@ func (a *AppOutSideInfo) AddAppBootConfig(appConfig interface{}) AppOption {
 		a.bootConfig = appConfig
 	})
 }
-
-type AppOption interface {
-	Apply(a *App)
-}
-
-type appOptionFunction func(a *App)
-
-func (of appOptionFunction) Apply(a *App) {
-	of(a)
-}

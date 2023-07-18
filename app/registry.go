@@ -12,6 +12,7 @@ import (
 // 注册器,注册和协调app
 type Registry struct {
 	cmdParameterTable *GlobalCmdFlag    // 命令行启服配置参数
+	CustomCmdFlag     interface{}       // 自定义命令行启服参数
 	bootConfigFile    interface{}       // 启服配置文件
 	initTasks         []task            // 在读取完配置之后做的一些初始化活动(例如:初始化csv配置表)
 	appOutSides       []*AppOutSideInfo // 外部拿到和交给注册表的app信息
@@ -35,8 +36,9 @@ func (r *Registry) GetBootConfigFile() interface{} {
 	return r.bootConfigFile
 }
 
-func NewRegistry() *Registry {
+func NewRegistry(options ...RegistryOption) *Registry {
 	r := &Registry{}
+	r.applyOptions(options...)
 	return r
 }
 
@@ -157,4 +159,11 @@ func (r *Registry) initApps() error {
 	}
 
 	return nil
+}
+
+func (scd *Registry) applyOptions(options ...RegistryOption) *Registry {
+	for _, option := range options {
+		option.Apply(scd)
+	}
+	return scd
 }
