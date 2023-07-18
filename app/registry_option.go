@@ -27,6 +27,6 @@ func AddRegistryBootConfigFile(content interface{}) RegistryOption {
 // 设置自定义启服参数
 func AddRegistryExBootFlags(content interface{}) RegistryOption {
 	return registryOptionFun(func(r *Registry) {
-		r.CustomCmdFlag = content
+		r.customCmdFlag = content
 	})
 }

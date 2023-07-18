@@ -12,7 +12,7 @@ import (
 // 注册器,注册和协调app
 type Registry struct {
 	cmdParameterTable *GlobalCmdFlag    // 命令行启服配置参数
-	CustomCmdFlag     interface{}       // 自定义命令行启服参数
+	customCmdFlag     interface{}       // 自定义命令行启服参数
 	bootConfigFile    interface{}       // 启服配置文件
 	initTasks         []task            // 在读取完配置之后做的一些初始化活动(例如:初始化csv配置表)
 	appOutSides       []*AppOutSideInfo // 外部拿到和交给注册表的app信息
@@ -30,6 +30,10 @@ func (r *Registry) AddInitTask(desc string, tFunc TaskFunc) *Registry {
 
 func (r *Registry) GetCmdParameterTable() interface{} {
 	return r.cmdParameterTable
+}
+
+func (r *Registry) GetCustomCmdFlag() interface{} {
+	return r.customCmdFlag
 }
 
 func (r *Registry) GetBootConfigFile() interface{} {
@@ -125,7 +129,7 @@ func (r *Registry) initialize() error {
 	}
 
 	// 解析命令行参数
-	flags.ParseWithStructPointers(append([]interface{}{r.cmdParameterTable}, bootConfigs))
+	flags.ParseWithStructPointers(append([]interface{}{r.cmdParameterTable, r.customCmdFlag}, bootConfigs))
 
 	// 解析配置文件
 	if r.bootConfigFile != nil && r.cmdParameterTable.BootConfigFile != "" {
