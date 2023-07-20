@@ -47,7 +47,7 @@ func NewRegistry(options ...RegistryOption) *Registry {
 }
 
 // 外部调用为注册表增加一个app信息
-func (r *Registry) AddAppOutSide(appOutSides []*AppOutSideInfo) *Registry {
+func (r *Registry) AddAppOutSide(appOutSides ...*AppOutSideInfo) *Registry {
 	r.appOutSides = append(r.appOutSides, appOutSides...)
 	return r
 }
