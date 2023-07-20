@@ -43,7 +43,7 @@ func flagParseStruct2Flags(st interface{}) {
 	for i := 0; i < stTo.NumField(); i++ {
 		field := stTo.Field(i)
 
-		key, find := field.Tag.Lookup("env")
+		key, find := field.Tag.Lookup("flag")
 		if !find {
 			continue
 		}
@@ -54,7 +54,7 @@ func flagParseStruct2Flags(st interface{}) {
 		if !find {
 			defaultValue, find = field.Tag.Lookup("default")
 			if !find {
-				defaultValue = fmt.Sprintf("not_found_env_%v", key)
+				defaultValue = fmt.Sprintf("not_found_flag_%v", key)
 			}
 		}
 
