@@ -127,11 +127,9 @@ func (r *Registry) initialize() error {
 			bootConfigs = append(bootConfigs, a.bootConfig)
 		}
 	}
-	bootConfigs = append(bootConfigs, r.cmdParameterTable)
-	bootConfigs = append(bootConfigs, r.customCmdFlag)
 
 	// 解析命令行参数
-	flags.ParseWithStructPointers(bootConfigs)
+	flags.ParseWithStructPointers(append([]interface{}{r.cmdParameterTable, r.customCmdFlag}, bootConfigs...)...)
 
 	// 解析配置文件
 	if r.bootConfigFile != nil && r.cmdParameterTable.BootConfigFile != "" {
