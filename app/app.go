@@ -38,7 +38,7 @@ func newApp(name string) *App {
 	return app
 }
 
-func (a *App) addService(desc string, tFunc TaskFunc) *App {
+func (a *App) AddService(desc string, tFunc TaskFunc) *App {
 	if tFunc == nil {
 		return a
 	}
@@ -46,7 +46,7 @@ func (a *App) addService(desc string, tFunc TaskFunc) *App {
 	return a
 }
 
-func (a *App) addPost(desc string, tFunc TaskJobFunc) *App {
+func (a *App) AddPost(desc string, tFunc TaskJobFunc) *App {
 	if tFunc == nil {
 		return a
 	}
@@ -54,7 +54,7 @@ func (a *App) addPost(desc string, tFunc TaskJobFunc) *App {
 	return a
 }
 
-func (a *App) addServer(desc string, tFunc TaskFunc) *App {
+func (a *App) AddServer(desc string, tFunc TaskFunc) *App {
 	if tFunc == nil {
 		return a
 	}
