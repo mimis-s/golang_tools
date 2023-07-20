@@ -43,6 +43,9 @@ func New(addr string, etcdAddr []string, etcdBasePath string, listenAddr string)
 
 // 注册rpc调用
 func (s *ServerManage) RegisterOneService(serverName string, handler interface{}) error {
+	if s == nil {
+		return nil
+	}
 	return s.ServiceHandler.RegisterName(serverName, handler, "")
 }
 
