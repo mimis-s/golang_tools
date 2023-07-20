@@ -38,11 +38,11 @@ func newApp(name string) *App {
 	return app
 }
 
-func (a *App) AddService(desc string, tFunc TaskFunc) *App {
-	if tFunc == nil {
+func (a *App) AddService(desc string, s *rpcxService.ServerManage) *App {
+	if s == nil {
 		return a
 	}
-	a.serviceTasks = append(a.serviceTasks, task{desc: desc, execute: tFunc})
+	a.serviceTasks = append(a.serviceTasks, task{desc: desc, execute: s})
 	return a
 }
 
@@ -54,11 +54,11 @@ func (a *App) AddPost(desc string, tFunc TaskJobFunc) *App {
 	return a
 }
 
-func (a *App) AddServer(desc string, tFunc TaskFunc) *App {
-	if tFunc == nil {
+func (a *App) AddServer(desc string, s webService.Service) *App {
+	if s == nil {
 		return a
 	}
-	a.serverTasks = append(a.serverTasks, task{desc: desc, execute: tFunc})
+	a.serverTasks = append(a.serverTasks, task{desc: desc, execute: s})
 	return a
 }
 
